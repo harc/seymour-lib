@@ -1,0 +1,236 @@
+<html>
+  <body>
+    <head><title>Seymour-Lib</title></head>
+    <script src="SourceLoc.js"></script>
+    <script src="events.js"></script>
+    <script src="Env.js"></script>
+    <script src="EventRecorder.js"></script>
+    <script src="macroViz.js"></script>
+    <script src="microViz.js"></script>
+    <script src="prog.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" >
+    <div id="exampleButtons"></div>
+    <div id="microVizDiv"></div>
+    <div id="macroVizDiv"></div>
+    <script>
+
+const examples = {};
+
+function addExample(name, setupFn) {
+  const button = exampleButtons.appendChild(document.createElement('a'));
+  button.classList.add('exampleButton');
+  button.appendChild(document.createTextNode(name));
+  button.setAttribute('href', '?' + name);
+  examples[name] = () => {
+    button.classList.add('selected');
+    setupFn();
+  };
+}
+
+let globalEnv;
+
+addExample('seymour-myFor', () => {
+  prog({name: 'program', code: [
+    {name: 'enterDecl', code: 'var enter = 0;'}, '\n',
+    {name: 'leaveDecl', code: 'var leave = 0;'}, '\n',
+    {name: 'forDef', code: [
+      'def for ', {name: 'thisDecl', code: 'Number'}, '\n',
+      '    to: ', {name: 'endDecl', code: 'end'}, '\n',
+      '    do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
+      '  ...\n',
+      '  ', {name: 'enterAssignment', code: 'enter = enter + 1;'}, '\n',
+      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+      '  ', {name: 'leaveAssignment', code: 'leave = leave + 1;'}, '\n',
+      '  ...\n',
+      '}'
+    ]},
+    '\n\n',
+    {name: 'gDecl', code: 'var g = 0;'}, '\n',
+    {name: 'fDef', code: [
+      'def f() {\n',
+      '  ', {name: 'gAssignment', code: 'g = g + 1'}, ';\n',
+      '}'
+    ]},
+    '\n\n',
+    {name: 'sumDecl', code: 'var sum = 0;'}, '\n',
+    {name: 'forCall', code: [
+      'for 1 to: 3 do: ', {name: 'forBody', code: [
+        '{', {name: 'xDecl', code: 'x'}, ' |\n',
+        '  ', {name: 'sumAssignment', code: 'sum = sum + x;'}, '\n',
+        '  ', {name: 'fCall', code: 'f()'}, ';\n',
+        '}'
+      ]}
+    ]},
+    ';'
+  ]});
+
+  const R = new EventRecorder();
+  globalEnv = R.mkEnv(sls.program);
+
+  let enter = R.varDecl(sls.enterDecl, globalEnv, 'enter', 0);
+  let leave = R.varDecl(sls.leaveDecl, globalEnv, 'leave', 0);
+  function _for(start, end, body) {
+    const forEnv = R.mkEnv(sls.forDef);
+    R.varDecl(sls.thisDecl, forEnv, 'this', start);
+    R.varDecl(sls.endDecl, forEnv, 'end', end);
+    R.varDecl(sls.bodyDecl, forEnv, 'body', body);
+    for (let idx = start; idx <= end; idx++) {
+      enter = R.varAssign(sls.enterAssignment, forEnv, globalEnv, 'enter', enter + 1);
+      (R.pushSend(sls.bodyCall, forEnv, body, 'call', [idx]), body(idx), R.popSend());
+      leave = R.varAssign(sls.leaveAssignment, forEnv, globalEnv, 'leave', leave + 1);
+    }
+  }
+
+  let g = R.varDecl(sls.gDecl, globalEnv, 'g', 0);
+  function f() {
+    const fEnv = R.mkEnv(sls.fDef);
+    g = R.varAssign(sls.gAssignment, fEnv, globalEnv, 'g', g + 1);
+  }
+
+  let sum = R.varDecl(sls.sumDecl, globalEnv, 'sum', 0);
+  const forBody = x => {
+    const forBodyEnv = R.mkEnv(sls.forBody);
+    R.varDecl(sls.xDecl, forBodyEnv, 'x', x);
+    sum = R.varAssign(sls.sumAssignment, forBodyEnv, globalEnv, 'sum', sum + x);
+    (R.pushSend(sls.fCall, forBodyEnv, f, 'call', []), f(), R.popSend());
+  };
+  (R.pushSend(sls.forCall, globalEnv, 1, 'for_to:do:', [3, forBody]), _for(1, 3, forBody), R.popSend());
+});
+
+addExample('seymour-nestedLoops', () => {
+  prog({name: 'program', code: [
+    {name: 'forDef', code: [
+      'def for ', {name: 'thisDecl', code: 'Number'}, '\n',
+      '    to: ', {name: 'endDecl', code: 'end'}, '\n',
+      '    do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
+      '  ...\n',
+      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+      '  ...\n',
+      '}']}, '\n\n',
+    {name: 'countDecl', code: 'var count = 0;'}, '\n',
+    {name: 'for1Call', code: [
+      'for 1 to: 3 do: ', {name: 'for1Body', code: ['{', {name: 'xDecl', code: 'x'}, ' |\n',
+      '  ', {name: 'for2Call', code: ['for 1 to: 3 do: ', {name: 'for2Body', code: ['{', {name: 'yDecl', code: 'y'}, ' |\n',
+      '    ', {name: 'countAssignment', code: 'count = count + 1;'}, '\n',
+      '  }']}]}, '\n',
+      '}']}]}, ';']});
+
+  const R = new EventRecorder();
+  globalEnv = R.mkEnv(sls.program);
+
+  function _for(start, end, body) {
+    const forEnv = R.mkEnv(sls.forDef);
+    R.varDecl(sls.thisDecl, forEnv, 'this', start);
+    R.varDecl(sls.endDecl, forEnv, 'end', end);
+    R.varDecl(sls.bodyDecl, forEnv, 'body', body);
+    for (let idx = start; idx <= end; idx++) {
+      (R.pushSend(sls.bodyCall, forEnv, body, 'call', [idx]), body(idx), R.popSend());
+    }
+  }
+
+  let count = R.varDecl(sls.countDecl, globalEnv, 'count', 0);
+  const for1Body = x => {
+    const for1BodyEnv = R.mkEnv(sls.for1Body);
+    const for2Body = y => {
+      const for2BodyEnv = R.mkEnv(sls.for2Body);
+      R.varDecl(sls.yDecl, for2BodyEnv, 'y', y);
+      count = R.varAssign(sls.countAssignment, for2BodyEnv, globalEnv, 'count', count + 1);
+    };
+    R.varDecl(sls.xDecl, for1BodyEnv, 'x', x);
+    (R.pushSend(sls.for2Call, for1BodyEnv, 1, 'for_to:do:', [3, for2Body]), _for(1, 3, for2Body), R.popSend());
+  };
+  (R.pushSend(sls.for1Call, globalEnv, 1, 'for_to:do:', [3, for1Body]), _for(1, 3, for1Body), R.popSend());
+});
+
+addExample('js-for', () => {
+  prog({name: 'program', code: [
+    {name: 'sumDecl', code: 'var sum = 0;'}, '\n',
+    'for (',
+      {name: 'xDecl', code: 'let x = 0;'},
+      ' x <= 3; ',
+      {name: 'xAssignment', code: 'x = x + 1'}, ') {\n',
+    '  ', {name: 'sumAssignment', code: 'sum = sum + x;'}, '\n',
+    '}'
+  ]});
+
+  const R = new EventRecorder();
+  globalEnv = R.mkEnv(sls.program);
+  let sum = R.varDecl(sls.sumDecl, globalEnv, 'sum', 0);
+  for (
+      let x = R.varDecl(sls.xDecl, globalEnv, 'x', 1);
+      x <= 3;
+      x =  R.varAssign(sls.xAssignment, globalEnv, globalEnv, 'x', x + 1)) {
+    sum = R.varAssign(sls.sumAssignment, globalEnv, globalEnv, 'sum', sum + x);
+  }
+});
+
+addExample('js-fact', () => {
+  prog({name: 'program', code: [
+    {name: 'fDef', code: ['function f(', {name: 'nDecl', code: 'n'}, ') {\n',
+    '  if (n === 0) {\n',
+    '    ', {name: 'baseReturn', code: 'return 1;'}, '\n',
+    '  } else {\n',
+    '    ', {name: 'mDecl', code: ['let  m = ', {name: 'recFCall', code: 'f(n - 1)'}, ';']}, '\n',
+    '    ', {name: 'recReturn', code: 'return n * m;'}, '\n',
+    '  }\n',
+    '}']},
+    '\n\n',
+    {name: 'ansDecl', code: ['let ans = ', {name: 'fCall', code: 'f(5)'}, ';']}
+  ]});
+
+  const R = new EventRecorder();
+  globalEnv = R.mkEnv(sls.program);
+  function f(n) {
+    const fEnv = R.mkEnv(sls.fDef);
+    R.varDecl(sls.nDecl, fEnv, 'n', n);
+    if (n === 0) {
+      return R.return(sls.baseReturn, fEnv, 1);
+    } else {
+      R.pushSend(sls.recFCall, fEnv, f, 'call', [n - 1]);
+      const mValue = f(n - 1);
+      R.popSend();
+      let m = R.varDecl(sls.mDecl, fEnv, 'm', mValue);
+      return R.return(sls.recReturn, fEnv, n * m);
+    }
+  }
+  R.pushSend(sls.fCall, globalEnv, f, 'call', [5]);
+  const ansValue = f(5);
+  R.popSend();
+  let ans = R.varDecl(sls.ansDecl, globalEnv, 'ans', ansValue);
+});
+
+addExample('js-reduce', () => {
+  prog({name: 'program', code: [
+    {name: 'ansDecl', code: ['var ans = ',
+      {name: 'reduceCall', code: ['[1, 2, 3, 4].reduce(',
+        {name: 'lambda', code: ['function(',
+          {name: 'xDecl', code: 'x'}, ', ',
+          {name: 'yDecl', code: 'y'}, ') {\n',
+          '  ', {name: 'return', code: 'return x + y;'}, '\n',
+          '}']}, ')']}, ';']}]});
+
+  const R = new EventRecorder();
+  globalEnv = R.mkEnv(sls.program);
+  const arr = [1, 2, 3, 4];
+  const f = function(x, y) {
+    const fEnv = R.mkEnv(sls.lambda);
+    R.varDecl(sls.xDecl, fEnv, 'x', x);
+    R.varDecl(sls.yDecl, fEnv, 'y', y);
+    return R.return(sls.return, fEnv, x + y);
+  };
+  R.pushSend(sls.reduceCall, globalEnv, arr, 'reduce', f);
+  const ansValue = arr.reduce(f);
+  R.popSend();
+  let ans = R.varDecl(sls.ansDecl, globalEnv, 'ans', ansValue);
+});
+
+const exampleName = window.location.search.substring(1) || Object.keys(examples)[0];
+examples[exampleName]();
+
+renderMicroViz(globalEnv);
+renderMacroViz(globalEnv);
+
+
+    </script>
+  </body>
+</html>
