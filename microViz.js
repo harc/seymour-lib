@@ -27,18 +27,20 @@ function renderMicroViz(env) {
     if (numColsInLine[sourceLoc.startLineNumber - 1] >= currCol) {
       currCol++;
     }
+    const isAns = eventToString(event) === 'ans = 10';
+    for (let ln = sourceLoc.startLineNumber; ln <= sourceLoc.endLineNumber; ln++) {
+      currCol = Math.max(currCol, numColsInLine[ln - 1]);
+    }
     const tr = view.children[sourceLoc.startLineNumber - 1];
-    const height = sourceLoc.endLineNumber - sourceLoc.startLineNumber + 1;
     const numSpacersNeeded = currCol - numColsInLine[sourceLoc.startLineNumber - 1] - 1;
-    if (numSpacersNeeded > 0) {
-      const spacerTd = tr.appendChild(document.createElement('td'));
-      spacerTd.setAttribute('colspan', numSpacersNeeded);
-      spacerTd.setAttribute('rowspan', height);
+    for (let idx = 0; idx < numSpacersNeeded; idx++) {
+      tr.appendChild(document.createElement('td'));
     }
     for (let ln = sourceLoc.startLineNumber; ln <= sourceLoc.endLineNumber; ln++) {
        numColsInLine[ln - 1] = currCol;
     }
     const td = tr.appendChild(document.createElement('td'));
+    const height = sourceLoc.endLineNumber - sourceLoc.startLineNumber + 1;
     td.setAttribute('rowspan', height);
     let text;
     if (event instanceof EventGroup) {
@@ -54,6 +56,8 @@ function renderMicroViz(env) {
     if (event instanceof VarDeclEvent ||
         event instanceof VarAssignmentEvent) {
       return event.name + ' = ' + valueToString(event.value);
+    } else if (event instanceof InstVarAssignmentEvent) {
+      return valueToString(event.obj) + '.' + event.name + ' = ' + valueToString(event.value);
     } else if (event instanceof ReturnEvent) {
       return 'return ' + valueToString(event.value);
     } else {
