@@ -24,12 +24,8 @@ function renderMicroViz(env) {
       currCol++;
     }
     currLine = sourceLoc.startLineNumber;
-    if (numColsInLine[sourceLoc.startLineNumber - 1] >= currCol) {
-      currCol++;
-    }
-    const isAns = eventToString(event) === 'ans = 10';
     for (let ln = sourceLoc.startLineNumber; ln <= sourceLoc.endLineNumber; ln++) {
-      currCol = Math.max(currCol, numColsInLine[ln - 1]);
+      currCol = Math.max(currCol, numColsInLine[ln - 1] + 1);
     }
     const tr = view.children[sourceLoc.startLineNumber - 1];
     const numSpacersNeeded = currCol - numColsInLine[sourceLoc.startLineNumber - 1] - 1;
