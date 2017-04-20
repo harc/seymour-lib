@@ -200,6 +200,79 @@ addExample('js-fact', () => {
 });
 
 addExample('js-reduce', () => {
+
+  prog({name: 'program', code: [
+    {name: 'reduceAssignment', code: ['Array.prototype.reduce = ',
+      {name: 'reduceFn', code: [
+        'function', {name: 'thisDecl', code: '('}, {name: 'fnDecl', code: 'fn'}, ', ', {name: 'zDecl', code: 'z'}, ') {\n',
+        '  ', {name: 'rDecl', code: 'var r = z;'}, '\n',
+        '  for (', {name: 'idxDecl', code: 'let idx = 0;'}, ' idx < this.length; ', {name: 'idxAssignment', code: 'idx = idx + 1'}, ') {\n',
+        '    ', {name: 'rAssignment', code: ['r = ', {name: 'fnCall', code: 'fn(r, this[idx])'}, ';']}, '\n',
+        '  }\n',
+        '  ', {name: 'reduceReturn', code: 'return r;'}, '\n',
+        '}'
+      ]}, ';']}, '\n\n',
+    {name: 'ansDecl', code: ['var ans = ',
+      {name: 'reduceCall', code: ['[1, 2, 3, 4].reduce(\n',
+        '  ', {name: 'lambda', code: ['function(', {name: 'xDecl', code: 'x'}, ', ', {name: 'yDecl', code: 'y'}, ') {\n',
+        '    ', {name: 'lambdaReturn', code: 'return x + y;'}, '\n',
+        '  }']}, ',\n',
+        '  0)']}, ';']}, '\n']});
+
+  const R = new EventRecorder();
+  globalEnv = R.mkEnv(sls.program);
+
+  const oldReduce = Array.prototype.reduce;
+  Array.prototype.reduce = R.instVarAssign(sls.reduceAssignment, globalEnv, Array.prototype, 'reduce', function(fn, z) {
+    const reduceEnv = R.mkEnv(sls.reduceFn);
+    R.varDecl(sls.thisDecl, reduceEnv, 'this', this);
+    R.varDecl(sls.fnDecl, reduceEnv, 'fn', fn);
+    R.varDecl(sls.zDecl, reduceEnv, 'z', z);
+    const rValue = z;
+    let r = R.varDecl(sls.rDecl, reduceEnv, 'r', rValue);
+    for (
+        let idx = R.varDecl(sls.idxDecl, reduceEnv, 'idx', 0);
+        idx < this.length;
+        idx = R.varAssign(sls.idxAssignment, reduceEnv, reduceEnv, 'idx', idx + 1)) {
+      R.pushSend(sls.fnCall, reduceEnv, fn, 'call', [r, this[idx]]);
+      const fnCall2Value = fn(r, this[idx]);
+      R.popSend();
+      r = R.varAssign(sls.rAssignment, reduceEnv, reduceEnv, 'r', fnCall2Value);
+    }
+    return R.return(sls.reduceReturn, reduceEnv, r);
+  });
+  const arr = [1, 2, 3, 4];
+  const f = function(x, y) {
+    const fEnv = R.mkEnv(sls.lambda);
+    R.varDecl(sls.xDecl, fEnv, 'x', x);
+    R.varDecl(sls.yDecl, fEnv, 'y', y);
+    return R.return(sls.lambdaReturn, fEnv, x + y);
+  };
+  R.pushSend(sls.reduceCall, globalEnv, arr, 'reduce', [f, 0]);
+  const ansValue = arr.reduce(f, 0);
+  R.popSend();
+  let ans = R.varDecl(sls.ansDecl, globalEnv, 'ans', ansValue);
+
+  Array.prototype.reduce = oldReduce;
+});
+
+addExample('js-reduce-not-instrumented', () => {
+
+  /*
+    The point of this example is to see what happens when you use non-instrumented libraries
+    (e.g., Array's reduce method) from instrumented code.
+
+    At the moment, we get a reasonable micro-visualization at the top level, but the
+    macro-visualization looks funny:
+      -- the decls of the anonymous function's arguments are appropriated by the reduce
+      -- other calls of the anonymous function are not shown
+
+    Is this worth pushing on, or should we just stick to supporting programs that are
+    fully intrumented? I'm intrigued by these "mixed" programs because if they're well-
+    supported, this library would be much more useful to the common programmer who's just
+    trying to get her job done.
+  */
+
   prog({name: 'program', code: [
     {name: 'ansDecl', code: ['var ans = ',
       {name: 'reduceCall', code: ['[1, 2, 3, 4].reduce(',
