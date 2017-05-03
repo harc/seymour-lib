@@ -1,3 +1,5 @@
+* Implement micro-viz view for new/
+
 * Produce a nice explanation of the current algorithm
 
 * Decide how to model nested scopes in JS, e.g., in js-reduce example
