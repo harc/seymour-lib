@@ -1,10 +1,8 @@
 * Produce a nice explanation of the current algorithm
 
-* Use "Toby's trick" at the position (not line) level
-  -- implement inside-out rule to prevent false iterations
-  -- change view to take advantage of this (e.g., multiple events in a single TD)
-
-* Think about adding more organization to the model
+* Decide how to model nested scopes in JS, e.g., in js-reduce example
+  (leaning towards "pretend sends" at the moment)
 
 * Think about Saketh's "line group" abstraction
   -- maybe it's the way to get less rigid columns in the view?
+

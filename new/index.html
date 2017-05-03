@@ -1,0 +1,270 @@
+<html>
+  <body>
+    <head><title>Seymour-Lib</title></head>
+    <script src="Env.js"></script>
+    <script src="EventRecorder.js"></script>
+    <script src="MicroVizEvents.js"></script>
+    <script src="SourceLoc.js"></script>
+    <script src="events.js"></script>
+    <script src="macroViz.js"></script>
+    <script src="microViz.js"></script>
+    <script src="prog.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" >
+    <div id="exampleButtons"></div>
+    <div id="microVizDiv"></div>
+    <div id="macroVizDiv"></div>
+    <script>
+
+const examples = {};
+
+function addExample(name, setupFn) {
+  const button = exampleButtons.appendChild(document.createElement('a'));
+  button.classList.add('exampleButton');
+  button.appendChild(document.createTextNode(name));
+  button.setAttribute('href', '?' + name);
+  examples[name] = () => {
+    button.classList.add('selected');
+    setupFn();
+  };
+}
+
+let globalEnv;
+
+addExample('seymour-myFor', () => {
+  prog({name: 'program', code: [
+    {name: 'enterDecl', code: 'var enter = 0;'}, '\n',
+    {name: 'leaveDecl', code: 'var leave = 0;'}, '\n',
+    {name: 'forDef', code: [
+      'def for ', {name: 'thisDecl', code: 'Number'}, ' ',
+        'to: ', {name: 'endDecl', code: 'end'}, ' ',
+        'do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
+      '  ...\n',
+      '  ', {name: 'enterAssignment', code: 'enter = enter + 1;'}, '\n',
+      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+      '  ', {name: 'leaveAssignment', code: 'leave = leave + 1;'}, '\n',
+      '  ...\n',
+      '}'
+    ]},
+    '\n\n',
+    {name: 'gDecl', code: 'var g = 0;'}, '\n',
+    {name: 'fDef', code: [
+      'def f() {\n',
+      '  ', {name: 'gAssignment', code: 'g = g + 1'}, ';\n',
+      '}'
+    ]},
+    '\n\n',
+    {name: 'sumDecl', code: 'var sum = 0;'}, '\n',
+    {name: 'forCall', code: [
+      'for 1 to: 3 do: ', {name: 'forBody', code: [
+        '{', {name: 'xDecl', code: 'x'}, ' |\n',
+        '  ', {name: 'sumAssignment', code: 'sum = sum + x;'}, '\n',
+        '  ', {name: 'fCall', code: 'f()'}, ';\n',
+        '}'
+      ]}
+    ]},
+    ';'
+  ]});
+
+  const R = new EventRecorder();
+  globalEnv = R.program(sls.program);
+
+  let enter = R.declVar(sls.enterDecl, globalEnv, 'enter', 0);
+  let leave = R.declVar(sls.leaveDecl, globalEnv, 'leave', 0);
+  function _for(start, end, body) {
+    const forEnv = R.mkEnv(sls.forDef);
+    R.declVar(sls.thisDecl, forEnv, 'this', start);
+    R.declVar(sls.endDecl, forEnv, 'end', end);
+    R.declVar(sls.bodyDecl, forEnv, 'body', body);
+    for (let idx = start; idx <= end; idx++) {
+      enter = R.assignVar(sls.enterAssignment, forEnv, globalEnv, 'enter', enter + 1);
+      (R.send(sls.bodyCall, forEnv, body, 'call', [idx]), R.receive(body(idx)));
+      leave = R.assignVar(sls.leaveAssignment, forEnv, globalEnv, 'leave', leave + 1);
+    }
+  }
+
+  let g = R.declVar(sls.gDecl, globalEnv, 'g', 0);
+  function f() {
+    const fEnv = R.mkEnv(sls.fDef);
+    g = R.assignVar(sls.gAssignment, fEnv, globalEnv, 'g', g + 1);
+  }
+
+  let sum = R.declVar(sls.sumDecl, globalEnv, 'sum', 0);
+  const forBody = x => {
+    const forBodyEnv = R.mkEnv(sls.forBody);
+    R.declVar(sls.xDecl, forBodyEnv, 'x', x);
+    sum = R.assignVar(sls.sumAssignment, forBodyEnv, globalEnv, 'sum', sum + x);
+    (R.send(sls.fCall, forBodyEnv, f, 'call', []), R.receive(f()));
+  };
+  (R.send(sls.forCall, globalEnv, 1, 'for_to:do:', [3, forBody]), R.receive(_for(1, 3, forBody)));
+});
+
+addExample('seymour-nestedLoops', () => {
+  prog({name: 'program', code: [
+    {name: 'forDef', code: [
+      'def for ', {name: 'thisDecl', code: 'Number'}, ' ',
+        'to: ', {name: 'endDecl', code: 'end'}, ' ',
+        'do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
+      '  ...\n',
+      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+      '  ...\n',
+      '}']}, '\n\n',
+    {name: 'countDecl', code: 'var count = 0;'}, '\n',
+    {name: 'for1Call', code: [
+      'for 1 to: 3 do: ', {name: 'for1Body', code: ['{', {name: 'xDecl', code: 'x'}, ' |\n',
+      '  ', {name: 'for2Call', code: ['for 1 to: 3 do: ', {name: 'for2Body', code: ['{', {name: 'yDecl', code: 'y'}, ' |\n',
+      '    ', {name: 'countAssignment', code: 'count = count + 1;'}, '\n',
+      '  }']}]}, '\n',
+      '}']}]}, ';']});
+
+  const R = new EventRecorder();
+  globalEnv = R.program(sls.program);
+
+  function _for(start, end, body) {
+    const forEnv = R.mkEnv(sls.forDef);
+    R.declVar(sls.thisDecl, forEnv, 'this', start);
+    R.declVar(sls.endDecl, forEnv, 'end', end);
+    R.declVar(sls.bodyDecl, forEnv, 'body', body);
+    for (let idx = start; idx <= end; idx++) {
+      (R.send(sls.bodyCall, forEnv, body, 'call', [idx]), R.receive(body(idx)));
+    }
+  }
+
+  let count = R.declVar(sls.countDecl, globalEnv, 'count', 0);
+  const for1Body = x => {
+    const for1BodyEnv = R.mkEnv(sls.for1Body);
+    const for2Body = y => {
+      const for2BodyEnv = R.mkEnv(sls.for2Body);
+      R.declVar(sls.yDecl, for2BodyEnv, 'y', y);
+      count = R.assignVar(sls.countAssignment, for2BodyEnv, globalEnv, 'count', count + 1);
+    };
+    R.declVar(sls.xDecl, for1BodyEnv, 'x', x);
+    (R.send(sls.for2Call, for1BodyEnv, 1, 'for_to:do:', [3, for2Body]), R.receive(_for(1, 3, for2Body)));
+  };
+  (R.send(sls.for1Call, globalEnv, 1, 'for_to:do:', [3, for1Body]), R.receive(_for(1, 3, for1Body)));
+});
+
+/*
+addExample('seymour-blockCall', () => {
+  prog({name: 'program', code: [
+    {name: 'xDecl', code: 'var x = 0;'}, '\n',
+    {name: 'ifThenCall', code: ['if true then: ', {name: 'trueBranch', code: ['{\n',
+      {name: 'bAssign', code: }}}
+    'for (',
+      {name: 'xDecl', code: 'let x = 0;'},
+      ' x <= 3; ',
+      {name: 'xAssignment', code: 'x = x + 1'}, ') {\n',
+    '  ', {name: 'sumAssignment', code: 'sum = sum + x;'}, '\n',
+    '}'
+  ]});
+
+});
+*/
+
+addExample('js-for', () => {
+  prog({name: 'program', code: [
+    {name: 'sumDecl', code: 'var sum = 0;'}, '\n',
+    'for (',
+      {name: 'xDecl', code: 'let x = 0;'},
+      ' x <= 3; ',
+      {name: 'xAssignment', code: 'x = x + 1'}, ') {\n',
+    '  ', {name: 'sumAssignment', code: 'sum = sum + x;'}, '\n',
+    '}'
+  ]});
+
+  const R = new EventRecorder();
+  globalEnv = R.program(sls.program);
+  let sum = R.declVar(sls.sumDecl, globalEnv, 'sum', 0);
+  for (
+      let x = R.declVar(sls.xDecl, globalEnv, 'x', 1);
+      x <= 3;
+      x =  R.assignVar(sls.xAssignment, globalEnv, globalEnv, 'x', x + 1)) {
+    sum = R.assignVar(sls.sumAssignment, globalEnv, globalEnv, 'sum', sum + x);
+  }
+});
+
+addExample('js-fact', () => {
+  prog({name: 'program', code: [
+    {name: 'fDef', code: ['function f(', {name: 'nDecl', code: 'n'}, ') {\n',
+    '  if (n === 0) {\n',
+    '    ', {name: 'baseReturn', code: 'return 1;'}, '\n',
+    '  } else {\n',
+    '    ', {name: 'mDecl', code: ['let  m = ', {name: 'recFCall', code: 'f(n - 1)'}, ';']}, '\n',
+    '    ', {name: 'recReturn', code: 'return n * m;'}, '\n',
+    '  }\n',
+    '}']},
+    '\n\n',
+    {name: 'ansDecl', code: ['let ans = ', {name: 'fCall', code: 'f(5)'}, ';']}
+  ]});
+
+  const R = new EventRecorder();
+  globalEnv = R.program(sls.program);
+  function f(n) {
+    const fEnv = R.mkEnv(sls.fDef);
+    R.declVar(sls.nDecl, fEnv, 'n', n);
+    if (n === 0) {
+      return R.return(sls.baseReturn, fEnv, 1);
+    } else {
+      let m = R.declVar(sls.mDecl, fEnv, 'm', (R.send(sls.recFCall, fEnv, f, 'call', [n - 1]), R.receive(f(n - 1))));
+      return R.return(sls.recReturn, fEnv, n * m);
+    }
+  }
+  let ans = R.declVar(sls.ansDecl, globalEnv, 'ans', (R.send(sls.fCall, globalEnv, f, 'call', [5]), R.receive(f(5))));
+});
+
+addExample('js-reduce', () => {
+
+  prog({name: 'program', code: [
+    {name: 'reduceAssignment', code: ['Array.prototype.reduce = ',
+      {name: 'reduceFn', code: [
+        'function', {name: 'thisDecl', code: '('}, {name: 'fnDecl', code: 'fn'}, ', ', {name: 'zDecl', code: 'z'}, ') {\n',
+        '  ', {name: 'rDecl', code: 'var r = z;'}, '\n',
+        '  for (', {name: 'idxDecl', code: 'let idx = 0;'}, ' idx < this.length; ', {name: 'idxAssignment', code: 'idx = idx + 1'}, ') {\n',
+        '    ', {name: 'rAssignment', code: ['r = ', {name: 'fnCall', code: 'fn(r, this[idx])'}, ';']}, '\n',
+        '  }\n',
+        '  ', {name: 'reduceReturn', code: 'return r;'}, '\n',
+        '}'
+      ]}, ';']}, '\n\n',
+    {name: 'ansDecl', code: ['var ans = ',
+      {name: 'reduceCall', code: ['[1, 2, 3, 4].reduce(\n',
+        '    ', {name: 'lambda', code: ['(', {name: 'xDecl', code: 'x'}, ', ', {name: 'yDecl', code: 'y'}, ') ',
+          {name: 'lambdaReturn', code: '=> x + y'}]}, ',\n',
+        '    0)']}, ';']}, '\n']});
+
+  const R = new EventRecorder();
+  globalEnv = R.program(sls.program);
+
+  const oldReduce = Array.prototype.reduce;
+  Array.prototype.reduce = R.assignInstVar(sls.reduceAssignment, globalEnv, Array.prototype, 'reduce', function(fn, z) {
+    const reduceEnv = R.mkEnv(sls.reduceFn);
+    R.declVar(sls.thisDecl, reduceEnv, 'this', this);
+    R.declVar(sls.fnDecl, reduceEnv, 'fn', fn);
+    R.declVar(sls.zDecl, reduceEnv, 'z', z);
+    let r = R.declVar(sls.rDecl, reduceEnv, 'r', z);
+    for (
+        let idx = R.declVar(sls.idxDecl, reduceEnv, 'idx', 0);
+        idx < this.length;
+        idx = R.assignVar(sls.idxAssignment, reduceEnv, reduceEnv, 'idx', idx + 1)) {
+      r = R.assignVar(sls.rAssignment, reduceEnv, reduceEnv, 'r', (R.send(sls.fnCall, reduceEnv, fn, 'call', [r, this[idx]]), R.receive(fn(r, this[idx]))));
+    }
+    return R.return(sls.reduceReturn, reduceEnv, r);
+  });
+  const arr = [1, 2, 3, 4];
+  const f = function(x, y) {
+    const fEnv = R.mkEnv(sls.lambda);
+    R.declVar(sls.xDecl, fEnv, 'x', x);
+    R.declVar(sls.yDecl, fEnv, 'y', y);
+    return R.return(sls.lambdaReturn, fEnv, x + y);
+  };
+  let ans = R.declVar(sls.ansDecl, globalEnv, 'ans', (R.send(sls.reduceCall, globalEnv, arr, 'reduce', [f, 0]), R.receive(arr.reduce(f, 0))));
+  Array.prototype.reduce = oldReduce;
+});
+
+const exampleName = window.location.search.substring(1) || Object.keys(examples)[0];
+examples[exampleName]();
+
+renderMicroViz(globalEnv);
+renderMacroViz(globalEnv);
+
+    </script>
+  </body>
+</html>
