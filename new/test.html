@@ -1,0 +1,78 @@
+<html>
+  <head>
+    <style>
+
+program, microviz {
+  font-family: monospace;
+  float: left;
+  display: inline-block;
+  _padding: 4px;
+  border: 1px solid #efefef;
+}
+
+program {
+  margin-right: 20px;
+}
+
+line {
+  padding: 4px;
+  display: block;
+}
+
+dot1, thing1, thing2, thing3, thing4, thing5, thing6, thing7 {
+  display: inline-block;
+  padding: 4px;
+  border: 1px solid cornflowerblue;
+  float: left;
+}
+
+thing2 {
+  min-height: 200px;
+}
+
+thing4 {
+  min-height: 150px;
+}
+
+thing5 {
+  clear: left;
+}
+
+    </style>
+  </head>
+  <body>
+    <program>
+      <line number="1">1: a(); var sum = 0; var x = f(); g(</line>
+      <line number="2">2:                                 ); var prod = 1;</line>
+    </program>
+    <microviz>
+      <dot1 fromLine="1" toLine="1">*</dot1>
+      <thing1 fromLine="1" toLine="1">sum = 0</thing1>
+      <thing2 fromLine="1" toLine="1">f()</thing2>
+      <thing3 fromLine="1" toLine="1">x = 6</thing3>
+      <thing4 fromLine="1" toLine="2">g()</thing4>
+      <thing5 fromLine="2" toLine="2">prod = 1</thing5>
+    </microviz>
+    <script>
+
+const elements = [].slice.call(document.querySelectorAll('*[fromLine][toLine]'));
+const lineHeights = {};
+for (let lineNumber = 1; lineNumber <= 2; lineNumber++) {
+  const top = elements.
+      filter(element => element.getAttribute('fromLine') == lineNumber).
+      map(element => element.getBoundingClientRect().top).
+      reduce((x, y) => Math.min(x, y));
+  const bottom = elements.
+      filter(element => element.getAttribute('toLine') == lineNumber).
+      map(element => element.getBoundingClientRect().bottom).
+      reduce((x, y) => Math.max(x, y));
+  const height = bottom - top;
+  const line = document.querySelector('line[number="' + lineNumber + '"]');
+  const marginBottom = height - line.clientHeight;
+  console.log('line', lineNumber, 'needs a', marginBottom, 'px margin');
+  line.style.marginBottom = height - line.clientHeight;
+}
+
+    </script>
+  </body>
+</html>
