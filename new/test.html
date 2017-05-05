@@ -1,76 +1,215 @@
 <html>
   <head>
+    <meta charset="utf-8">
     <style>
 
-program, microviz {
+body {
   font-family: monospace;
-  float: left;
-  display: inline-block;
-  _padding: 4px;
-  border: 1px solid #efefef;
+  line-height: 1.4;
 }
 
 program {
+  display: inline-block;
+  float: left;
   margin-right: 20px;
 }
 
-line {
-  padding: 4px;
+program > line {
   display: block;
 }
 
-dot1, thing1, thing2, thing3, thing4, thing5, thing6, thing7 {
+program > line > text {
+  white-space: pre;
+}
+
+program > line > number {
+  text-align: right;
+  padding-right: 4px;
+  color: cornflowerblue;
+}
+
+microViz {
   display: inline-block;
-  padding: 4px;
-  border: 1px solid cornflowerblue;
+  padding-left: 10px;
+  border-left: 1px dashed cornflowerblue;
+}
+
+microViz event,
+microViz send,
+microViz localEventGroup,
+microViz remoteEventGroup,
+microViz spacerGroup,
+microViz spacer {
+  display: inline-block;
   float: left;
 }
 
-thing2 {
-  min-height: 200px;
+microViz localEventGroup,
+microViz remoteEventGroup {
+  margin-right: 10px;
 }
 
-thing4 {
-  min-height: 150px;
+microViz spacerGroup {
+  border-color: green;
 }
 
-thing5 {
+microViz remoteEventGroup {
+  opacity: 0.65;
+}
+
+microViz .newline,
+microViz spacer {
   clear: left;
+}
+
+microViz send.empty > spacerGroup > spacer:first-child::before {
+  color: hsl(0, 0%, 50%);
+  content: '·';
+}
+
+
+
+microViz localEventGroup,
+microViz remoteEventGroup {
+  border: 1px solid cornflowerblue;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+microViz send {
+  border: 1px solid red;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+microViz spacerGroup {
+  border: 1px solid green;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+microViz spacer::before {
+  _content: '(spacer)';
+  color: hsl(0, 0%, 70%);
 }
 
     </style>
   </head>
   <body>
     <program>
-      <line number="1">1: a(); var sum = 0; var x = f(); g(</line>
-      <line number="2">2:                                 ); var prod = 1;</line>
+      <line startLine="1" endLine="1">
+        <number>1</number>
+        <text>var sum = 0;</text>
+      </line>
+      <line startLine="2" endLine="2">
+        <number>2</number>
+        <text></text>
+      </line>
+      <line startLine="3" endLine="3">
+        <number>3</number>
+        <text>for 1 to: 3 do: {x |</text>
+      </line>
+      <line startLine="4" endLine="4">
+        <number>4</number>
+        <text>  sum = sum + x;</text>
+      </line>
+      <line startLine="5" endLine="5">
+        <number>5</number>
+        <text>  if x == 2 then: {</text>
+      </line>
+      <line startLine="6" endLine="6">
+        <number>6</number>
+        <text>    f();</text>
+      </line>
+      <line startLine="7" endLine="7">
+        <number>7</number>
+        <text>  };</text>
+      </line>
+      <line startLine="8" endLine="8">
+        <number>8</number>
+        <text>};</text>
+      </line>
     </program>
     <microviz>
-      <dot1 fromLine="1" toLine="1">*</dot1>
-      <thing1 fromLine="1" toLine="1">sum = 0</thing1>
-      <thing2 fromLine="1" toLine="1">f()</thing2>
-      <thing3 fromLine="1" toLine="1">x = 6</thing3>
-      <thing4 fromLine="1" toLine="2">g()</thing4>
-      <thing5 fromLine="2" toLine="2">prod = 1</thing5>
+      <localEventGroup>
+        <event class="newline" startLine="1" endLine="1">sum  = 0</event>
+        <spacer startLine="2" endLine="2"></spacer>
+        <send class="newline"  startLine="3" endLine="8">
+          <spacerGroup>
+            <spacer startLine="3" endLine="3"></spacer>
+            <spacer startLine="4" endLine="4"></spacer>
+            <spacer startLine="5" endLine="5"></spacer>
+            <spacer startLine="6" endLine="6"></spacer>
+            <spacer startLine="7" endLine="7"></spacer>
+            <spacer startLine="8" endLine="8"></spacer>
+          </spacerGroup>
+          <localEventGroup>
+            <event class="newline" startLine="3" endLine="3">x = 1</event>
+            <event class="newline" startLine="4" endLine="4">sum = 1</event>
+            <send class="newline empty" startLine="5" endLine="7">
+              <spacerGroup>
+                <spacer startLine="5" endLine="5"></spacer>
+                <spacer startLine="6" endLine="6"></spacer>
+                <spacer startLine="7" endLine="7"></spacer>
+              </spacerGroup>
+            </send>
+          </localEventGroup>
+          <localEventGroup>
+            <event class="newline" startLine="3" endLine="3">x = 2</event>
+            <event class="newline" startLine="4" endLine="4">sum = 3</event>
+            <send class="newline" startLine="5" endLine="7">
+              <spacerGroup>
+                <spacer startLine="5" endLine="5"></spacer>
+                <spacer startLine="6" endLine="6"></spacer>
+                <spacer startLine="7" endLine="7"></spacer>
+              </spacerGroup>
+              <localEventGroup>
+                <spacer startLine="5" endLine="5"></spacer>
+                <send class="newline" startLine="6" endLine="6">
+                  <remoteEventGroup>
+                    <event class="newline" startLine="6" endLine="6">a = 1</event>
+                    <event class="newline" startLine="6" endLine="6">b = 2</event>
+                    <event class="newline" startLine="6" endLine="6">c = 3</event>
+                  </remoteEventGroup>
+                </send>
+              </localEventGroup>
+            </send>
+          </localEventGroup>
+          <localEventGroup>
+            <event class="newline" startLine="3" endLine="3">x = 3</event>
+            <event class="newline" startLine="4" endLine="4">sum = 6</event>
+            <send class="newline empty" startLine="5" endLine="7">
+              <spacerGroup>
+                <spacer startLine="5" endLine="5"></spacer>
+                <spacer startLine="6" endLine="6"></spacer>
+                <spacer startLine="7" endLine="7"></spacer>
+              </spaceGroup>
+            </send>
+          </localEventGroup>
+        </send>
+      </localEventGroup>
     </microviz>
     <script>
 
-const elements = [].slice.call(document.querySelectorAll('*[fromLine][toLine]'));
-const lineHeights = {};
-for (let lineNumber = 1; lineNumber <= 2; lineNumber++) {
+const elements = [].slice.call(document.querySelectorAll('*[startLine][endLine]'));
+for (let lineNumber = 1; lineNumber <= 8; lineNumber++) {
   const top = elements.
-      filter(element => element.getAttribute('fromLine') == lineNumber).
+      filter(element => element.getAttribute('startLine') == lineNumber).
       map(element => element.getBoundingClientRect().top).
       reduce((x, y) => Math.min(x, y));
   const bottom = elements.
-      filter(element => element.getAttribute('toLine') == lineNumber).
+      filter(element => element.getAttribute('endLine') == lineNumber).
       map(element => element.getBoundingClientRect().bottom).
       reduce((x, y) => Math.max(x, y));
   const height = bottom - top;
-  const line = document.querySelector('line[number="' + lineNumber + '"]');
+  const line = document.querySelector('line[startLine="' + lineNumber + '"]');
   const marginBottom = height - line.clientHeight;
-  console.log('line', lineNumber, 'needs a', marginBottom, 'px margin');
-  line.style.marginBottom = height - line.clientHeight;
+  line.style.marginBottom = marginBottom;
+  const spacers = [].slice.call(document.querySelectorAll(
+    'spacer[startLine="' + lineNumber + '"][endLine="' + lineNumber + '"]'));
+  spacers.forEach(spacer => {
+    spacer.style.marginBottom = height - spacer.clientHeight;
+  });
 }
 
     </script>

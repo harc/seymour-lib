@@ -6,6 +6,20 @@ class Event {
     this.env = env;
     this.children = [];
   }
+
+  toMicroVizString() {
+    throw new Error('abstract method!');
+  }
+
+  _valueString(v) {
+    if (typeof v === 'function') {
+      return '{function}';
+    } else if (v === undefined) {
+      return 'undefined';
+    } else {
+      return JSON.stringify(v);
+    }
+  }
 }
 
 class ProgramEvent extends Event {
@@ -31,6 +45,10 @@ class VarDeclEvent extends Event {
     this.name = name;
     this.value = value;
   }
+
+  toMicroVizString() {
+    return this.name + ' = ' + this._valueString(this.value);
+  }
 }
 
 class VarAssignmentEvent extends Event {
@@ -40,6 +58,10 @@ class VarAssignmentEvent extends Event {
     this.name = name;
     this.value = value;
   }
+
+  toMicroVizString() {
+    return this.name + ' = ' + this._valueString(this.value);
+  }
 }
 
 class InstVarAssignmentEvent extends Event {
@@ -48,6 +70,10 @@ class InstVarAssignmentEvent extends Event {
     this.obj = obj;
     this.name = name;
     this.value = value;
+  }
+
+  toMicroVizString() {
+    return this._valueString(this.obj) + '.' + this.name + ' = ' + this._valueString(this.value);
   }
 }
 
@@ -59,11 +85,19 @@ class InstantiationEvent extends Event {
     this.args = args;
     this.newInstance = newInstance;
   }
+
+  toMicroVizString() {
+    return 'new ' + this._valueString(this.class) + ' -> ' + this._valueString(this.newInstance);
+  }
 }
 
 class ReturnEvent extends Event {
   constructor(sourceLoc, env, value) {
     super(sourceLoc, env);
     this.value = value;
+  }
+
+  toMicroVizString() {
+    return 'return ' + this._valueString(this.value);
   }
 }

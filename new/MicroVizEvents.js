@@ -36,13 +36,14 @@ class MicroVizEvents {
   }
 }
 
-class EventGroup {
+class AbstractEventGroup {
   constructor() {
     this.events = [];
   }
 
   add(event) {
     this.events.push(event);
+    return this;
   }
 
   get lastEvent() {
@@ -50,5 +51,5 @@ class EventGroup {
   }
 }
 
-class LocalEventGroup extends EventGroup {}
-class RemoteEventGroup extends EventGroup {}
+class LocalEventGroup extends AbstractEventGroup {}
+class RemoteEventGroup extends AbstractEventGroup {}

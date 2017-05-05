@@ -1,4 +1,5 @@
 body {
+  width: 10000;
   font-family: futura;
   font-size: 8pt;
 }
@@ -63,6 +64,10 @@ table > tr > td.eventGroup {
   opacity: .6;
 }
 
+macroViz {
+  display: block;
+}
+
 macroVizNode {
   font-size: 7pt;
   display: inline-block;
@@ -80,6 +85,8 @@ macroVizNode > label {
   background: #efefef;
   margin: 1px;
 }
+
+/* ------------------------------------ */
 
 uvMicroVizEvents, uvLocalEventGroup, uvRemoteEventGroup {
   display: block;
@@ -110,3 +117,106 @@ uvMicroVizEventsLabel {
   display: block;
   margin: 2px;
 }
+
+/* ------------------------------------ */
+
+microViz {
+  display: block;
+  font-family: monospace;
+  line-height: 1.4;
+}
+
+microViz > program {
+  display: inline-block;
+  float: left;
+  margin-right: 20px;
+}
+
+microViz > program > line {
+  display: block;
+}
+
+microViz > program > line > text {
+  white-space: pre;
+}
+
+microViz > program > line > number {
+  text-align: right;
+  padding-right: 10px;
+  color: cornflowerblue;
+}
+
+microViz > send {
+  display: inline-block;
+  padding-left: 10px;
+  border-left: 1px dashed cornflowerblue;
+}
+
+microViz event,
+microViz send,
+microViz localEventGroup,
+microViz remoteEventGroup,
+microViz spacerGroup,
+microViz spacer {
+  display: inline-block;
+  float: left;
+}
+
+microViz localEventGroup,
+microViz remoteEventGroup {
+  margin-right: 10px;
+}
+
+microViz spacerGroup {
+  border-color: green;
+}
+
+microViz event.remote {
+  opacity: 0.5;
+}
+
+microViz event.remote::before {
+  content: '(';
+}
+
+microViz event.remote::after {
+  content: ')';
+}
+
+microViz .newline,
+microViz spacer {
+  clear: left;
+}
+
+microViz send.empty > spacerGroup > spacer:first-child::before {
+  color: hsl(0, 0%, 50%);
+  content: '·';
+}
+
+
+
+/*
+microViz localEventGroup,
+microViz remoteEventGroup {
+  border: 1px solid cornflowerblue;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+microViz send {
+  border: 1px solid red;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+microViz spacerGroup {
+  border: 1px solid green;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+microViz spacer::before {
+  content: '(spacer)';
+  color: hsl(0, 0%, 70%);
+}
+*/
