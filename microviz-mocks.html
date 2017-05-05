@@ -87,7 +87,12 @@
       padding-left: 0.2rem;
     }
 
+    .iter > .send:not(.empty) {
+      width: 100%;
+    }
+
     .send.empty > .iter:first-child > .spacer:first-child::before {
+      color:hsl(0, 0%, 80%);
       content: "·";
     }
 
