@@ -36,17 +36,16 @@ class MicroVizEvents {
 
     const eventIsLocal = this.sourceLoc.contains(event.sourceLoc);
     if (eventIsLocal && this.lastEventGroup instanceof LocalEventGroup) {
-      if (this.lastEventGroup instanceof LocalEventGroup) {
-        if (event.sourceLoc.startPos >= this.lastEventGroup.lastEvent.sourceLoc.endPos ||
-            event.sourceLoc.startLineNumber >= this.lastEventGroup.lastEvent.sourceLoc.endLineNumber) {
-          // no-op
-        } else {
-          const isNewIteration = !event.sourceLoc.contains(this.lastEventGroup.lastEvent.sourceLoc);
-          this.eventGroups.push(new LocalEventGroup(isNewIteration));
-        }
+      if (event.sourceLoc.startPos >= this.lastEventGroup.lastEvent.sourceLoc.endPos ||
+          event.sourceLoc.startLineNumber >= this.lastEventGroup.lastEvent.sourceLoc.endLineNumber) {
+        // no-op
+      } else {
+        const isNewIteration = !event.sourceLoc.contains(this.lastEventGroup.lastEvent.sourceLoc);
+        this.eventGroups.push(new LocalEventGroup(isNewIteration));
       }
     } else if (eventIsLocal && !(this.lastEventGroup instanceof LocalEventGroup)) {
-      this.eventGroups.push(new LocalEventGroup(false));  // not a new iteration
+      const isNewIteration = !!this.lastEventGroup;
+      this.eventGroups.push(new LocalEventGroup(isNewIteration));
     } else if (!eventIsLocal && !(this.lastEventGroup instanceof RemoteEventGroup)) {
       const isNewIteration = !!this.lastEventGroup;
       this.eventGroups.push(new RemoteEventGroup(isNewIteration));
