@@ -8,16 +8,12 @@ function eventToMacroVizNode(event) {
   const eventIsProgramOrSend = event instanceof ProgramEvent || event instanceof SendEvent;
   return mkMacroVizNode(
       event.sourceLoc.name,
-      event.children.map(eventToMacroVizNode),
+      event.children,
       event.activationEnv ? (() => renderMicroViz(event.activationEnv)) : null);
 }
 
 function mkMacroVizNode(labelText, childNodes, onClickFn) {
-  const node = document.createElement('macroVizNode');
-  const label = node.appendChild(document.createElement('label'));
-  label.appendChild(document.createTextNode(labelText));
+  const label = d('label', {}, labelText);
   label.onclick = onClickFn;
-  const children = node.appendChild(document.createElement('children'));
-  childNodes.forEach(childNode => children.appendChild(childNode));
-  return node;
+  return d('macroVizNode', {}, label, d('children', {}, ...childNodes.map(eventToMacroVizNode)));
 }

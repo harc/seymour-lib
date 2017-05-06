@@ -1,0 +1,24 @@
+* Render micro-viz incrementally
+  - with each new event, update DOM and fix heights of only the affected lines
+    (should be straightforward)
+  - animate, for bonus points :)
+
+* Show "iteration lines"
+
+* Add an example w/ pre-events, e.g.,
+
+    for f()
+    to: g()
+    do: {
+      ...
+    }
+
+  Will probably want to wrap pre-events in a LocalEventGroup, and distinguish between LEGs that
+  start a new iteration, and those that don't.
+
+* Figure out how to deal with new and init
+
+* Write a nice explanation of the new / simplified algorithm
+
+* Decide how to model nested scopes in JS, e.g., in js-reduce example
+  (leaning towards "pretend sends" at the moment, probably w/ nice API in EventRecorder)

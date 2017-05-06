@@ -4,8 +4,9 @@ body {
   font-size: 8pt;
 }
 
+/* ------------------------------------ */
+
 #exampleButtons {
-  margin-bottom: 10px;
   padding: 4px;
 }
 
@@ -25,44 +26,7 @@ a.exampleButton.selected {
   box-shadow: 0px 0px 1px #aaa;
 }
 
-table {
-  border-collapse: collapse;
-  margin-bottom: 12pt;
-}
-
-table > tr > td {
-  font-family: Monaco;
-  font-size: 8pt;
-  line-height: 1.3;
-  white-space: pre;
-  vertical-align: top;
-  padding-right: 8pt;
-}
-
-table > tr > td:first-child {
-  color: cornflowerblue;
-  font-weight: bold;
-  text-align: right;
-}
-
-table > tr > td:nth-child(2) {
-  color: black;
-  padding-right: 40px;
-}
-
-table > tr:nth-child(2n + 1) > td:nth-child(1),
-table > tr:nth-child(2n + 1) > td:nth-child(2) {
-  background: #fafafa;
-}
-
-table > tr > td:nth-child(1n + 3) {
-  border: 1px solid #eee;
-  background: white;
-}
-
-table > tr > td.eventGroup {
-  opacity: .6;
-}
+/* ------------------------------------ */
 
 macroViz {
   display: block;
@@ -88,135 +52,148 @@ macroVizNode > label {
 
 /* ------------------------------------ */
 
-uvMicroVizEvents, uvLocalEventGroup, uvRemoteEventGroup {
+#microVizDiv {
+  display: inline-block;
+  font-family: monospace;
+  line-height: 1.4;
+  margin: 10px 0;
+}
+
+#microVizDiv > program {
+  display: inline-block;
+  float: left;
+  margin-right: 20px;
+}
+
+#microVizDiv > program > line {
+  display: block;
+}
+
+#microVizDiv > program > line > text {
+  white-space: pre;
+}
+
+#microVizDiv > program > line > number {
+  text-align: right;
+  padding-right: 10px;
+  color: cornflowerblue;
+}
+
+#microVizDiv > send {
+  display: inline-block;
+  padding-left: 10px;
+  border-left: 1px dashed cornflowerblue;
+}
+
+#microVizDiv event,
+#microVizDiv send,
+#microVizDiv localEventGroup,
+#microVizDiv remoteEventGroup,
+#microVizDiv spacerGroup,
+#microVizDiv spacer {
+  display: inline-block;
+  float: left;
+}
+
+#microVizDiv localEventGroup,
+#microVizDiv remoteEventGroup {
+  margin-right: 15px;
+}
+
+#microVizDiv event + event:not(.newline) {
+  margin-left: 15px;
+}
+
+#microVizDiv event.remote {
+  opacity: 0.5;
+}
+
+#microVizDiv event.remote::before {
+  content: '(';
+}
+
+#microVizDiv event.remote::after {
+  content: ')';
+}
+
+#microVizDiv .newline,
+#microVizDiv spacer {
+  clear: left;
+}
+
+/* only debugging stuff past this point */
+
+/*
+#microVizDiv spacerGroup {
+  border-color: green;
+}
+
+#microVizDiv localEventGroup,
+#microVizDiv remoteEventGroup {
+  border: 1px solid cornflowerblue;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+#microVizDiv send {
+  border: 1px solid red;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+#microVizDiv spacerGroup {
+  border: 1px solid green;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+#microVizDiv spacer::before {
+  content: '(spacer)';
+  color: hsl(0, 0%, 70%);
+}
+*/
+
+/* ------------------------------------ */
+
+#microVizDiv > model {
+  display: block;
+}
+
+#microVizDiv > model send,
+#microVizDiv > model localEventGroup,
+#microVizDiv > model remoteEventGroup {
   display: block;
   vertical-align: top;
   margin: 4px;
 }
 
-uvRemoteEventGroup {
+#microVizDiv > model send,
+#microVizDiv > model event {
+  display: inline-block;
+  float: left;
+  clear: left;
+}
+
+#microVizDiv > model remoteEventGroup {
   opacity: 0.6;
 }
 
-uvLocalEventGroup, uvRemoteEventGroup {
+#microVizDiv > model localEventGroup,
+#microVizDiv > model remoteEventGroup {
   display: inline-block;
   border: 1px solid cornflowerblue;
   border-radius: 4px;
   margin-left: 8pt;
 }
 
-uvEvent {
-  display: inline-block;
+#microVizDiv > model event {
   background: #efefef;
   border-radius: 4px;
   padding: 4px;
   margin: 2px;
 }
 
-uvMicroVizEventsLabel {
+#microVizDiv > model send > label {
   display: block;
   margin: 2px;
 }
-
-/* ------------------------------------ */
-
-microViz {
-  display: block;
-  font-family: monospace;
-  line-height: 1.4;
-}
-
-microViz > program {
-  display: inline-block;
-  float: left;
-  margin-right: 20px;
-}
-
-microViz > program > line {
-  display: block;
-}
-
-microViz > program > line > text {
-  white-space: pre;
-}
-
-microViz > program > line > number {
-  text-align: right;
-  padding-right: 10px;
-  color: cornflowerblue;
-}
-
-microViz > send {
-  display: inline-block;
-  padding-left: 10px;
-  border-left: 1px dashed cornflowerblue;
-}
-
-microViz event,
-microViz send,
-microViz localEventGroup,
-microViz remoteEventGroup,
-microViz spacerGroup,
-microViz spacer {
-  display: inline-block;
-  float: left;
-}
-
-microViz localEventGroup,
-microViz remoteEventGroup {
-  margin-right: 10px;
-}
-
-microViz spacerGroup {
-  border-color: green;
-}
-
-microViz event.remote {
-  opacity: 0.5;
-}
-
-microViz event.remote::before {
-  content: '(';
-}
-
-microViz event.remote::after {
-  content: ')';
-}
-
-microViz .newline,
-microViz spacer {
-  clear: left;
-}
-
-microViz send.empty > spacerGroup > spacer:first-child::before {
-  color: hsl(0, 0%, 50%);
-  content: '·';
-}
-
-
-
-/*
-microViz localEventGroup,
-microViz remoteEventGroup {
-  border: 1px solid cornflowerblue;
-  border-radius: 4px;
-  padding: 0 2px;
-}
-
-microViz send {
-  border: 1px solid red;
-  border-radius: 4px;
-  padding: 0 2px;
-}
-
-microViz spacerGroup {
-  border: 1px solid green;
-  border-radius: 4px;
-  padding: 0 2px;
-}
-
-microViz spacer::before {
-  content: '(spacer)';
-  color: hsl(0, 0%, 70%);
-}
-*/
