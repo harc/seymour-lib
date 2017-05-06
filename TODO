@@ -1,13 +1,16 @@
+* Decide how to model nested scopes in JS, e.g., in js-reduce example
+  (leaning towards "pretend sends" at the moment, probably w/ nice API in EventRecorder)
+
+* Figure out how to do show return values from sends
+  - e.g., with the "dot" idea
+
+* Figure out "compositing", i.e., how to show info from other (parent) envs
+
+* Figure out how to deal with new and init
+
+* Write a nice explanation of the new / simplified algorithm
+
 * Render micro-viz incrementally
   - with each new event, update DOM and fix heights of only the affected lines
     (should be straightforward)
   - animate, for bonus points :)
-
-* Decide how to model nested scopes in JS, e.g., in js-reduce example
-  (leaning towards "pretend sends" at the moment, probably w/ nice API in EventRecorder)
-
-* Figure out "compositing", i.e., how to show info from other (parent) envs
-
-* Write a nice explanation of the new / simplified algorithm
-
-* Figure out how to deal with new and init

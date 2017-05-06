@@ -9,12 +9,15 @@ class SourceLoc {
     this.name = name;
   }
 
+  equals(sourceLoc) {
+    return this.startPos === sourceLoc.startPos && this.endPos === sourceLoc.endPos;
+  }
+
   contains(sourceLoc) {
     return this.startPos <= sourceLoc.startPos && sourceLoc.endPos <= this.endPos;
   }
 
   strictlyContains(sourceLoc) {
-    return this.contains(sourceLoc) &&
-        (this.startPos !== sourceLoc.startPos || this.endPos !== sourceLoc.endPos);
+    return this.contains(sourceLoc) && !this.equals(sourceLoc);
   }
 }

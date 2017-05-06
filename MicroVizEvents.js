@@ -34,13 +34,14 @@ class MicroVizEvents {
     //     sum = sum + x;      [sum = 1] | [sum = 3] | [sum = 6]
     //   };                              |           |
 
-    const eventIsLocal = this.sourceLoc.contains(event.sourceLoc);
+    const eventIsLocal = this.sourceLoc.strictlyContains(event.sourceLoc);
     if (eventIsLocal && this.lastEventGroup instanceof LocalEventGroup) {
-      if (event.sourceLoc.startPos >= this.lastEventGroup.lastEvent.sourceLoc.endPos ||
-          event.sourceLoc.startLineNumber >= this.lastEventGroup.lastEvent.sourceLoc.endLineNumber) {
+      if (!event.sourceLoc.equals(this.lastEventGroup.lastEvent.sourceLoc) &&
+          (event.sourceLoc.startPos >= this.lastEventGroup.lastEvent.sourceLoc.endPos ||
+           event.sourceLoc.startLineNumber >= this.lastEventGroup.lastEvent.sourceLoc.endLineNumber)) {
         // no-op
       } else {
-        const isNewIteration = !event.sourceLoc.contains(this.lastEventGroup.lastEvent.sourceLoc);
+        const isNewIteration = !event.sourceLoc.strictlyContains(this.lastEventGroup.lastEvent.sourceLoc);
         this.eventGroups.push(new LocalEventGroup(isNewIteration));
       }
     } else if (eventIsLocal && !(this.lastEventGroup instanceof LocalEventGroup)) {
