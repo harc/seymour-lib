@@ -18,11 +18,13 @@ class MicroVizEvents {
          !(this.lastEventGroup instanceof LocalEventGroup) ||
          event.sourceLoc.startPos < this.lastEventGroup.lastEvent.sourceLoc.startPos)) {
       const isNewIteration =
+          this.lastEventGroup instanceof RemoteEventGroup ||
           this.lastEventGroup instanceof LocalEventGroup &&
-          !this.lastEventGroup.lastEvent.sourceLoc.contains(event.sourceLoc);
+              !event.sourceLoc.contains(this.lastEventGroup.lastEvent.sourceLoc);
       this.eventGroups.push(new LocalEventGroup(isNewIteration));
     } else if (!eventIsLocal && !(this.lastEventGroup instanceof RemoteEventGroup)) {
-      this.eventGroups.push(new RemoteEventGroup());
+      const isNewIteration = !!this.lastEventGroup;
+      this.eventGroups.push(new RemoteEventGroup(isNewIteration));
     }
     this.lastEventGroup.add(event);
   }
@@ -33,7 +35,8 @@ class MicroVizEvents {
 }
 
 class AbstractEventGroup {
-  constructor() {
+  constructor(isNewIteration) {
+    this.isNewIteration = isNewIteration;
     this.events = [];
   }
 
@@ -49,9 +52,12 @@ class AbstractEventGroup {
 
 class LocalEventGroup extends AbstractEventGroup {
   constructor(isNewIteration = false) {
-    super();
-    this.isNewIteration = isNewIteration;
+    super(isNewIteration);
   }
 }
 
-class RemoteEventGroup extends AbstractEventGroup {}
+class RemoteEventGroup extends AbstractEventGroup {
+  constructor(isNewIteration = false) {
+    super(isNewIteration);
+  }
+}

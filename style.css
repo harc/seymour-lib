@@ -95,6 +95,10 @@ macroVizNode > label {
   float: left;
 }
 
+#microVizDiv spacer::after {
+  content: '\00a0';
+}
+
 #microVizDiv localEventGroup,
 #microVizDiv remoteEventGroup {
   margin-right: 15px;
@@ -102,6 +106,12 @@ macroVizNode > label {
 
 #microVizDiv event + event:not(.newline) {
   margin-left: 15px;
+}
+
+#microVizDiv localEventGroup[isNewIteration="true"],
+#microVizDiv remoteEventGroup[isNewIteration="true"] {
+  padding-left: 15px;
+  border-left: 1px dashed #aaa;
 }
 
 #microVizDiv event.remote {

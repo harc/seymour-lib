@@ -27,11 +27,13 @@ function renderMicroViz(env) {
         {startLine: sourceLoc.startLineNumber, endLine: sourceLoc.endLineNumber, class: cssClass};
     if (thing instanceof Event) {
       return d('event', attributes, thing.toMicroVizString());
-    } else if (thing instanceof MicroVizEvents) {
+    } else if (thing instanceof MicroVizEvents && thing.eventGroups.length > 0) {
+      return d('send', attributes, ...thing.eventGroups.map(eg => renderMicroViz(eg, sourceLoc)));
+    } else if (thing instanceof MicroVizEvents && thing.eventGroups.length === 0) {
       return d('send', attributes,
-          d('spacerGroup', {}, ...range(sourceLoc.startLineNumber, sourceLoc.endLineNumber).map(line =>
-              d('spacer', {startLine: line, endLine: line}))),
-          ...thing.eventGroups.map(eg => renderMicroViz(eg, sourceLoc)));
+          d('spacerGroup', {},
+              ...range(sourceLoc.startLineNumber, sourceLoc.endLineNumber).map(
+                  line => d('spacer', {startLine: line, endLine: line}))));
     } else if (thing instanceof LocalEventGroup) {
       let currLine = sourceLoc.startLineNumber;
       const children = [];
@@ -44,9 +46,15 @@ function renderMicroViz(env) {
         children.push(renderMicroViz(event, event.sourceLoc, firstInLine ? 'newline' : ''));
         currLine = event.sourceLoc.endLineNumber + 1;
       });
+      while (currLine <= sourceLoc.endLineNumber) {
+        children.push(d('spacer', {startLine: currLine, endLine: currLine}));
+        currLine++;
+      }
       return d('localEventGroup', {isNewIteration: thing.isNewIteration}, ...children);
     } else if (thing instanceof RemoteEventGroup) {
-      return d('remoteEventGroup', {}, ...thing.events.map(e => renderMicroViz(e, sourceLoc, 'remote newline')));
+      attributes.isNewIteration = thing.isNewIteration;
+      return d('remoteEventGroup', attributes,
+          ...thing.events.map(e => renderMicroViz(e, sourceLoc, 'remote newline')));
     } else {
       throw new Error('not sure how to renderMicroViz ' + JSON.stringify(thing));
     }
@@ -61,7 +69,8 @@ function renderMicroViz(env) {
           map(element => element.getBoundingClientRect().bottom).
           reduce((x, y) => Math.max(x, y));
 
-      const line = document.querySelector('#microVizDiv program line[startLine="' + lineNumber + '"]');
+      const line =
+          document.querySelector('#microVizDiv program line[startLine="' + lineNumber + '"]');
       inflate(line, bottom);
 
       const spacers = [].slice.call(
@@ -71,10 +80,14 @@ function renderMicroViz(env) {
       const localEvents = [].slice.call(
           document.querySelectorAll('#microVizDiv event[endLine="' + lineNumber + '"]:not(.remote)'));
       localEvents.forEach(event => inflate(event, bottom));
+
+      const remoteEventGroups = [].slice.call(
+          document.querySelectorAll('#microVizDiv remoteEventGroup[endLine="' + lineNumber + '"]'));
+      remoteEventGroups.forEach(remoteEventGroup => inflate(remoteEventGroup, bottom));
     }
   }
 
   function inflate(element, bottomY) {
-    element.style.marginBottom = bottomY - element.getBoundingClientRect().bottom;
+    element.style.paddingBottom = bottomY - element.getBoundingClientRect().bottom;
   }
 }

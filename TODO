@@ -3,8 +3,6 @@
     (should be straightforward)
   - animate, for bonus points :)
 
-* Show "iteration lines"
-
 * Decide how to model nested scopes in JS, e.g., in js-reduce example
   (leaning towards "pretend sends" at the moment, probably w/ nice API in EventRecorder)
 

@@ -100,6 +100,51 @@ addExample('seymour-myFor', () => {
   (R.send(sls.forCall, globalEnv, 1, 'for_to:do:', [3, forBody]), R.receive(_for(1, 3, forBody)));
 });
 
+addExample('seymour-nestedLoops', () => {
+  prog({name: 'program', code: [
+    {name: 'forDef', code: [
+      'def for ', {name: 'thisDecl', code: 'Number'}, ' ',
+        'to: ', {name: 'endDecl', code: 'end'}, ' ',
+        'do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
+      '  ...\n',
+      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+      '  ...\n',
+      '}']}, '\n\n',
+    {name: 'countDecl', code: 'var count = 0;'}, '\n',
+    {name: 'for1Call', code: [
+      'for 1 to: 3 do: ', {name: 'for1Body', code: ['{', {name: 'xDecl', code: 'x'}, ' |\n',
+      '  ', {name: 'for2Call', code: ['for 1 to: 3 do: ', {name: 'for2Body', code: ['{', {name: 'yDecl', code: 'y'}, ' |\n',
+      '    ', {name: 'countAssignment', code: 'count = count + 1;'}, '\n',
+      '  }']}]}, ';\n',
+      '}']}]}, ';']});
+
+  const R = new EventRecorder();
+  globalEnv = R.program(sls.program);
+
+  function _for(start, end, body) {
+    const forEnv = R.mkEnv(sls.forDef);
+    R.declVar(sls.thisDecl, forEnv, 'this', start);
+    R.declVar(sls.endDecl, forEnv, 'end', end);
+    R.declVar(sls.bodyDecl, forEnv, 'body', body);
+    for (let idx = start; idx <= end; idx++) {
+      (R.send(sls.bodyCall, forEnv, body, 'call', [idx]), R.receive(body(idx)));
+    }
+  }
+
+  let count = R.declVar(sls.countDecl, globalEnv, 'count', 0);
+  const for1Body = x => {
+    const for1BodyEnv = R.mkEnv(sls.for1Body);
+    const for2Body = y => {
+      const for2BodyEnv = R.mkEnv(sls.for2Body);
+      R.declVar(sls.yDecl, for2BodyEnv, 'y', y);
+      count = R.assignVar(sls.countAssignment, for2BodyEnv, globalEnv, 'count', count + 1);
+    };
+    R.declVar(sls.xDecl, for1BodyEnv, 'x', x);
+    (R.send(sls.for2Call, for1BodyEnv, 1, 'for_to:do:', [3, for2Body]), R.receive(_for(1, 3, for2Body)));
+  };
+  (R.send(sls.for1Call, globalEnv, 1, 'for_to:do:', [3, for1Body]), R.receive(_for(1, 3, for1Body)));
+});
+
 addExample('seymour-preEvents', () => {
   prog({name: 'program', code: [
     {name: 'forDef', code: [
@@ -162,51 +207,6 @@ addExample('seymour-preEvents', () => {
   const start = (R.send(sls.fCall1, globalEnv, f, 'call', []), R.receive(f()));
   const end = (R.send(sls.fCall2, globalEnv, f, 'call', []), R.receive(f())) + 1;
   (R.send(sls.forCall, globalEnv, start, 'for_to:do:', [end, forBody]), R.receive(_for(start, end, forBody)));
-});
-
-addExample('seymour-nestedLoops', () => {
-  prog({name: 'program', code: [
-    {name: 'forDef', code: [
-      'def for ', {name: 'thisDecl', code: 'Number'}, ' ',
-        'to: ', {name: 'endDecl', code: 'end'}, ' ',
-        'do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
-      '  ...\n',
-      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
-      '  ...\n',
-      '}']}, '\n\n',
-    {name: 'countDecl', code: 'var count = 0;'}, '\n',
-    {name: 'for1Call', code: [
-      'for 1 to: 3 do: ', {name: 'for1Body', code: ['{', {name: 'xDecl', code: 'x'}, ' |\n',
-      '  ', {name: 'for2Call', code: ['for 1 to: 3 do: ', {name: 'for2Body', code: ['{', {name: 'yDecl', code: 'y'}, ' |\n',
-      '    ', {name: 'countAssignment', code: 'count = count + 1;'}, '\n',
-      '  }']}]}, '\n',
-      '}']}]}, ';']});
-
-  const R = new EventRecorder();
-  globalEnv = R.program(sls.program);
-
-  function _for(start, end, body) {
-    const forEnv = R.mkEnv(sls.forDef);
-    R.declVar(sls.thisDecl, forEnv, 'this', start);
-    R.declVar(sls.endDecl, forEnv, 'end', end);
-    R.declVar(sls.bodyDecl, forEnv, 'body', body);
-    for (let idx = start; idx <= end; idx++) {
-      (R.send(sls.bodyCall, forEnv, body, 'call', [idx]), R.receive(body(idx)));
-    }
-  }
-
-  let count = R.declVar(sls.countDecl, globalEnv, 'count', 0);
-  const for1Body = x => {
-    const for1BodyEnv = R.mkEnv(sls.for1Body);
-    const for2Body = y => {
-      const for2BodyEnv = R.mkEnv(sls.for2Body);
-      R.declVar(sls.yDecl, for2BodyEnv, 'y', y);
-      count = R.assignVar(sls.countAssignment, for2BodyEnv, globalEnv, 'count', count + 1);
-    };
-    R.declVar(sls.xDecl, for1BodyEnv, 'x', x);
-    (R.send(sls.for2Call, for1BodyEnv, 1, 'for_to:do:', [3, for2Body]), R.receive(_for(1, 3, for2Body)));
-  };
-  (R.send(sls.for1Call, globalEnv, 1, 'for_to:do:', [3, for1Body]), R.receive(_for(1, 3, for1Body)));
 });
 
 /*
