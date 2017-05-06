@@ -44,7 +44,7 @@ function renderMicroViz(env) {
         children.push(renderMicroViz(event, event.sourceLoc, firstInLine ? 'newline' : ''));
         currLine = event.sourceLoc.endLineNumber + 1;
       });
-      return d('localEventGroup', {}, ...children);
+      return d('localEventGroup', {isNewIteration: thing.isNewIteration}, ...children);
     } else if (thing instanceof RemoteEventGroup) {
       return d('remoteEventGroup', {}, ...thing.events.map(e => renderMicroViz(e, sourceLoc, 'remote newline')));
     } else {

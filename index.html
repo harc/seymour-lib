@@ -100,6 +100,70 @@ addExample('seymour-myFor', () => {
   (R.send(sls.forCall, globalEnv, 1, 'for_to:do:', [3, forBody]), R.receive(_for(1, 3, forBody)));
 });
 
+addExample('seymour-preEvents', () => {
+  prog({name: 'program', code: [
+    {name: 'forDef', code: [
+      'def for ', {name: 'thisDecl', code: 'Number'}, ' ',
+        'to: ', {name: 'endDecl', code: 'end'}, ' ',
+        'do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
+      '  ...\n',
+      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+      '  ...\n',
+      '}'
+    ]},
+    '\n\n',
+    {name: 'gDecl', code: 'var g = 0;'}, '\n',
+    {name: 'fDef', code: [
+      'def f() {\n',
+      '  ', {name: 'gAssignment', code: 'g = g + 1;'}, '\n',
+      '  ', {name: 'fReturn', code: 'return g;'}, '\n',
+      '}'
+    ]},
+    '\n\n',
+    {name: 'sumDecl', code: 'var sum = 0;'}, '\n',
+    {name: 'forCall', code: [
+      'for ', {name: 'fCall1', code: 'f()'}, '\n',
+      'to: ', {name: 'fCall2', code: 'f()'}, ' + 1\n',
+      'do: ', {name: 'forBody', code: [
+        '{', {name: 'xDecl', code: 'x'}, ' |\n',
+        '  ', {name: 'sumAssignment', code: 'sum = sum + x;'}, '\n',
+        '}'
+      ]}
+    ]},
+    ';'
+  ]});
+
+  const R = new EventRecorder();
+  globalEnv = R.program(sls.program);
+
+  function _for(start, end, body) {
+    const forEnv = R.mkEnv(sls.forDef);
+    R.declVar(sls.thisDecl, forEnv, 'this', start);
+    R.declVar(sls.endDecl, forEnv, 'end', end);
+    R.declVar(sls.bodyDecl, forEnv, 'body', body);
+    for (let idx = start; idx <= end; idx++) {
+      (R.send(sls.bodyCall, forEnv, body, 'call', [idx]), R.receive(body(idx)));
+    }
+  }
+
+  let g = R.declVar(sls.gDecl, globalEnv, 'g', 0);
+  function f() {
+    const fEnv = R.mkEnv(sls.fDef);
+    g = R.assignVar(sls.gAssignment, fEnv, globalEnv, 'g', g + 1);
+    return R.return(sls.fReturn, fEnv, g);
+  }
+
+  let sum = R.declVar(sls.sumDecl, globalEnv, 'sum', 0);
+  const forBody = x => {
+    const forBodyEnv = R.mkEnv(sls.forBody);
+    R.declVar(sls.xDecl, forBodyEnv, 'x', x);
+    sum = R.assignVar(sls.sumAssignment, forBodyEnv, globalEnv, 'sum', sum + x);
+  };
+  const start = (R.send(sls.fCall1, globalEnv, f, 'call', []), R.receive(f()));
+  const end = (R.send(sls.fCall2, globalEnv, f, 'call', []), R.receive(f())) + 1;
+  (R.send(sls.forCall, globalEnv, start, 'for_to:do:', [end, forBody]), R.receive(_for(start, end, forBody)));
+});
+
 addExample('seymour-nestedLoops', () => {
   prog({name: 'program', code: [
     {name: 'forDef', code: [
