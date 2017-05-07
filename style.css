@@ -99,6 +99,11 @@ macroVizNode > label {
   content: '\00a0';
 }
 
+#microVizDiv spacerGroup > spacer:only-child::after {
+  content: '\b7';
+  color: hsl(0, 0%, 30%);
+}
+
 #microVizDiv localEventGroup,
 #microVizDiv remoteEventGroup {
   margin-right: 15px;
@@ -134,34 +139,29 @@ macroVizNode > label {
 /* only debugging stuff past this point */
 
 /*
-#microVizDiv spacerGroup {
-  border-color: green;
-}
-
 #microVizDiv localEventGroup,
 #microVizDiv remoteEventGroup {
   border: 1px solid cornflowerblue;
   border-radius: 4px;
-  padding: 0 2px;
+  padding: 1px;
 }
 
 #microVizDiv send {
   border: 1px solid red;
   border-radius: 4px;
-  padding: 0 2px;
+  padding: 1px;
 }
 
 #microVizDiv spacerGroup {
   border: 1px solid green;
   border-radius: 4px;
-  padding: 0 2px;
+  padding: 1px;
 }
 
-#microVizDiv spacer::before {
+#microVizDiv spacer::after {
   content: '(spacer)';
   color: hsl(0, 0%, 70%);
 }
-*/
 
 /* ------------------------------------ */
 
@@ -207,3 +207,4 @@ macroVizNode > label {
   display: block;
   margin: 2px;
 }
+*/
