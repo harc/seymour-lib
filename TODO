@@ -1,8 +1,9 @@
 * Decide how to model nested scopes in JS, e.g., in js-reduce example
   (leaning towards "pretend sends" at the moment, probably w/ nice API in EventRecorder)
 
-* Figure out how to do show return values from sends
-  - e.g., with the "dot" idea
+* Fix padding on "empty send" dots
+  - they should take up almost no space, but need left-padding if they're first-in-line,
+    and right-padding if they're "newline".
 
 * Figure out "compositing", i.e., how to show info from other (parent) envs
 

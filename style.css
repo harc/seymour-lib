@@ -62,7 +62,7 @@ macroVizNode > label {
 #microVizDiv > program {
   display: inline-block;
   float: left;
-  margin-right: 20px;
+  margin-right: 10px;
 }
 
 #microVizDiv > program > line {
@@ -81,7 +81,6 @@ macroVizNode > label {
 
 #microVizDiv > send {
   display: inline-block;
-  padding-left: 10px;
   border-left: 1px dashed cornflowerblue;
 }
 
@@ -95,27 +94,23 @@ macroVizNode > label {
   float: left;
 }
 
-#microVizDiv spacer::after {
-  content: '\00a0';
-}
-
-#microVizDiv spacerGroup > spacer:only-child::after {
+#microVizDiv send[empty="true"]::before {
   content: '\b7';
   color: hsl(0, 0%, 30%);
 }
 
-#microVizDiv localEventGroup,
-#microVizDiv remoteEventGroup {
-  margin-right: 15px;
+#microVizDiv event,
+#microVizDiv spacer,
+#microVizDiv send[empty="true"] {
+  margin: 0 10px;
 }
 
-#microVizDiv event + event:not(.newline) {
-  margin-left: 15px;
+#microVizDiv send[empty="true"] > spacerGroup > spacer {
+  margin: 0;
 }
 
 #microVizDiv localEventGroup[isNewIteration="true"],
 #microVizDiv remoteEventGroup[isNewIteration="true"] {
-  padding-left: 15px;
   border-left: 1px dashed #aaa;
 }
 
@@ -162,6 +157,7 @@ macroVizNode > label {
   content: '(spacer)';
   color: hsl(0, 0%, 70%);
 }
+*/
 
 /* ------------------------------------ */
 
@@ -207,4 +203,3 @@ macroVizNode > label {
   display: block;
   margin: 2px;
 }
-*/

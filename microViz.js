@@ -30,6 +30,7 @@ function renderMicroViz(env) {
     } else if (thing instanceof MicroVizEvents && thing.eventGroups.length > 0) {
       return d('send', attributes, ...thing.eventGroups.map(eg => renderMicroViz(eg, sourceLoc)));
     } else if (thing instanceof MicroVizEvents && thing.eventGroups.length === 0) {
+      attributes.empty = true;
       return d('send', attributes,
           d('spacerGroup', {},
               ...range(sourceLoc.startLineNumber, sourceLoc.endLineNumber).map(
