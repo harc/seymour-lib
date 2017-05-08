@@ -8,7 +8,7 @@ class Env {
     this.sourceLoc = sourceLoc;
     this.callerEnv = callerEnv;
     this.programOrSendEvent = programOrSendEvent;
-    this.microVizEvents = new MicroVizEvents(programOrSendEvent, sourceLoc);  // will only have local events
+    this.microVizEvents = new MicroVizEvents(programOrSendEvent, sourceLoc);
     this.programOrSendEventToMicroVizEvents = new Map([[programOrSendEvent, this.microVizEvents]]);
   }
 
@@ -38,30 +38,19 @@ class Env {
     if (event.env === this) {
       return this.programOrSendEvent;
     }
-    const rootSendEvent = this.rootSendEventFor(event);
-    const isLocal = evt => rootSendEvent.sourceLoc.strictlyContains(evt.sourceLoc);
-    if (!rootSendEvent || this.shouldOnlyShowWhenLocal(event) && !isLocal(event)) {
-      return null;
-    }
+
     let env = event.env;
-    while (env) {
+    while (env !== this) {
       const sendEvent = env.programOrSendEvent;
-      if (isLocal(sendEvent)) {
-        return sendEvent;
+      if (this.programOrSendEventToMicroVizEvents.has(sendEvent)) {
+        if (this.shouldOnlyShowWhenLocal(event)) {
+          return sendEvent.sourceLoc.strictlyContains(event.sourceLoc) ? sendEvent : null;
+        } else {
+          return sendEvent;
+        }
       } else {
         env = env.callerEnv;
       }
-    }
-    return rootSendEvent;
-  }
-
-  rootSendEventFor(event) {
-    let env = event.env;
-    while (env) {
-      if (env.programOrSendEvent.env === this) {
-        return env.programOrSendEvent;
-      }
-      env = env.callerEnv;
     }
     return null;
   }
