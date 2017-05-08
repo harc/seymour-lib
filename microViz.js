@@ -38,15 +38,23 @@ function renderMicroViz(env) {
     } else if (thing instanceof LocalEventGroup) {
       let currLine = sourceLoc.startLineNumber;
       const children = [];
+      let lastEventNode = null;
       thing.events.forEach(event => {
         const firstInLine = event.sourceLoc.startLineNumber >= currLine;
+        if (lastEventNode && firstInLine) {
+          lastEventNode.classList.add('lastInLine');
+        }
         while (currLine < event.sourceLoc.startLineNumber) {
           children.push(d('spacer', {startLine: currLine, endLine: currLine}));
           currLine++;
         }
-        children.push(renderMicroViz(event, event.sourceLoc, firstInLine ? 'newline' : ''));
+        lastEventNode = renderMicroViz(event, event.sourceLoc, firstInLine ? 'firstInLine' : '');
+        children.push(lastEventNode);
         currLine = event.sourceLoc.endLineNumber + 1;
       });
+      if (lastEventNode) {
+        lastEventNode.classList.add('lastInLine');
+      }
       while (currLine <= sourceLoc.endLineNumber) {
         children.push(d('spacer', {startLine: currLine, endLine: currLine}));
         currLine++;
@@ -55,7 +63,7 @@ function renderMicroViz(env) {
     } else if (thing instanceof RemoteEventGroup) {
       attributes.isNewIteration = thing.isNewIteration;
       return d('remoteEventGroup', attributes,
-          ...thing.events.map(e => renderMicroViz(e, sourceLoc, 'remote newline')));
+          ...thing.events.map(e => renderMicroViz(e, sourceLoc, 'remote firstInLine lastInLine')));
     } else {
       throw new Error('not sure how to renderMicroViz ' + JSON.stringify(thing));
     }

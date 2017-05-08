@@ -217,6 +217,58 @@ addExample('seymour-preEvents', () => {
   (R.send(sls.forCall, globalEnv, start, 'for_to:do:', [end, forBody]), R.receive(_for(start, end, forBody)));
 });
 
+addExample('emptySends', () => {
+  prog({name: 'program', code: [
+    {name: 'xDecl', code: 'var x = 5;'}, '\n',
+    {name: 'fDef', code: ['function f() { ', {name: 'fReturn', code: 'return 42;'}, '}']}, '\n\n',
+    {name: 'fCall1', code: 'f()'}, ';\n\n',
+    {name: 'fCall2', code: 'f()'}, '; ', {name: 'fCall3', code: 'f()'}, ';\n\n',
+    {name: 'fCall4', code: 'f()'}, '; ', {name: 'fCall5', code: 'f()'}, '; ', {name: 'fCall6', code: 'f()'}, ';\n\n',
+    {name: 'xAssign1', code: 'x = 1;'}, '\n',
+    {name: 'xAssign2', code: 'x = 2;'}, ' ', {name: 'xAssign3', code: 'x = 3;'}, '\n',
+    {name: 'xAssign4', code: 'x = 4;'}, ' ', {name: 'xAssign5', code: 'x = 5;'}, ' ', {name: 'xAssign6', code: 'x = 6;'}, '\n\n',
+    {name: 'xAssign7', code: ['x = ', {name: 'fCall7', code: 'f()'}, ';']}, '\n',
+    {name: 'xAssign8', code: ['x = ', {name: 'fCall8', code: 'f()'}, ';']}, ' ', {name: 'fCall9', code: 'f()'}, ';\n',
+    {name: 'fCall10', code: 'f()'}, '; ', {name: 'xAssign9', code: ['x = ', {name: 'fCall11', code: 'f()'}, ';']}, ' ', {name: 'fCall12', code: 'f()'}, ';\n'
+  ]});
+
+  const R = new EventRecorder();
+  globalEnv = R.program(sls.program);
+
+  let x = R.declVar(sls.xDecl, globalEnv, 'x', 5);
+
+  function f() {
+    const fEnv = R.mkEnv(sls.fDef);
+    return R.return(sls.fReturn, fEnv, 42);
+  }
+
+  (R.send(sls.fCall1, globalEnv, f, 'call', []), R.receive(f()));
+
+  (R.send(sls.fCall2, globalEnv, f, 'call', []), R.receive(f()));
+  (R.send(sls.fCall3, globalEnv, f, 'call', []), R.receive(f()));
+
+  (R.send(sls.fCall4, globalEnv, f, 'call', []), R.receive(f()));
+  (R.send(sls.fCall5, globalEnv, f, 'call', []), R.receive(f()));
+  (R.send(sls.fCall6, globalEnv, f, 'call', []), R.receive(f()));
+
+  x = R.assignVar(sls.xAssign1, globalEnv, globalEnv, 'x', 1);
+
+  x = R.assignVar(sls.xAssign2, globalEnv, globalEnv, 'x', 2);
+  x = R.assignVar(sls.xAssign3, globalEnv, globalEnv, 'x', 3);
+
+  x = R.assignVar(sls.xAssign4, globalEnv, globalEnv, 'x', 4);
+  x = R.assignVar(sls.xAssign5, globalEnv, globalEnv, 'x', 5);
+  x = R.assignVar(sls.xAssign6, globalEnv, globalEnv, 'x', 6);
+
+  x = R.assignVar(sls.xAssign7, globalEnv, globalEnv, 'x', (R.send(sls.fCall7, globalEnv, f, 'call', []), R.receive(f())));
+  x = R.assignVar(sls.xAssign8, globalEnv, globalEnv, 'x', (R.send(sls.fCall8, globalEnv, f, 'call', []), R.receive(f())));
+      (R.send(sls.fCall9, globalEnv, f, 'call', []), R.receive(f()));
+
+  (R.send(sls.fCall10, globalEnv, f, 'call', []), R.receive(f()));
+      x = R.assignVar(sls.xAssign9, globalEnv, globalEnv, 'x', (R.send(sls.fCall11, globalEnv, f, 'call', []), R.receive(f())));
+      (R.send(sls.fCall12, globalEnv, f, 'call', []), R.receive(f()));
+});
+
 /*
 addExample('seymour-blockCall', () => {
   prog({name: 'program', code: [
@@ -288,7 +340,6 @@ addExample('js-fact', () => {
 });
 
 addExample('js-reduce', () => {
-
   prog({name: 'program', code: [
     {name: 'reduceAssignment', code: ['Array.prototype.reduce = ',
       {name: 'reduceFn', code: [

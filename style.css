@@ -79,6 +79,7 @@ macroVizNode > label {
   color: cornflowerblue;
 }
 
+/* top-level send, whose sourceloc is always the entire program */
 #microVizDiv > send {
   display: inline-block;
   border-left: 1px dashed cornflowerblue;
@@ -99,14 +100,28 @@ macroVizNode > label {
   color: hsl(0, 0%, 30%);
 }
 
-#microVizDiv event,
-#microVizDiv spacer,
-#microVizDiv send[empty="true"] {
+#microVizDiv event {
   margin: 0 10px;
 }
 
-#microVizDiv send[empty="true"] > spacerGroup > spacer {
+#microVizDiv send {
   margin: 0;
+}
+
+#microVizDiv send[empty="true"].firstInLine {
+  margin-left: 10px;
+}
+
+#microVizDiv send[empty="true"].lastInLine {
+  margin-right: 10px;
+}
+
+#microVizDiv send[empty="true"] + event:not(.firstInLine) {
+  margin-left: 0;
+}
+
+#microVizDiv event + send[empty="true"]:not(.firstInLine) {
+  margin-left: -10px;
 }
 
 #microVizDiv localEventGroup[isNewIteration="true"],
@@ -126,7 +141,7 @@ macroVizNode > label {
   content: ')';
 }
 
-#microVizDiv .newline,
+#microVizDiv .firstInLine,
 #microVizDiv spacer {
   clear: left;
 }
