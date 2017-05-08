@@ -1,7 +1,10 @@
 'use strict';
 
+let nextEventId = 0;
+
 class Event {
   constructor(sourceLoc, env) {
+    this.id = nextEventId++;
     this.sourceLoc = sourceLoc;
     this.env = env;
     this.children = [];
