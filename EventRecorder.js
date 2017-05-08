@@ -18,7 +18,7 @@ class EventRecorder {
   send(sourceLoc, env, recv, selector, args) {
     const event = new SendEvent(sourceLoc, env, recv, selector, args);
     this.eventStack.push(event);
-    // this event is only send to event handler after it gets an activation environment (see below)
+    // this event is only sent to event handler after it gets an activation environment (see below)
   }
 
   mkEnv(newEnvSourceLoc) {
@@ -41,6 +41,15 @@ class EventRecorder {
     this.topOfEventStack.returnValue = returnValue;
     this.eventStack.pop();
     return returnValue;
+  }
+
+  enterScope(sourceLoc, env) {
+    this.send(sourceLoc, env, null, 'enterNewScope', []);
+    return this.mkEnv(sourceLoc);
+  }
+
+  leaveScope() {
+    this.receive(null);
   }
 
   _emit(event) {

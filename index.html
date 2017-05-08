@@ -41,9 +41,10 @@ addExample('seymour-myFor', () => {
         'to: ', {name: 'endDecl', code: 'end'}, ' ',
         'do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
       '  ...\n',
-      '  ', {name: 'enterAssignment', code: 'enter = enter + 1;'}, '\n',
-      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
-      '  ', {name: 'leaveAssignment', code: 'leave = leave + 1;'}, '\n',
+      {name: 'theLoop', code: [
+        '  ', {name: 'enterAssignment', code: 'enter = enter + 1;'}, '\n',
+        '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+        '  ', {name: 'leaveAssignment', code: 'leave = leave + 1;'}]}, '\n',
       '  ...\n',
       '}'
     ]},
@@ -77,11 +78,13 @@ addExample('seymour-myFor', () => {
     R.declVar(sls.thisDecl, forEnv, 'this', start);
     R.declVar(sls.endDecl, forEnv, 'end', end);
     R.declVar(sls.bodyDecl, forEnv, 'body', body);
+    const loopEnv = R.enterScope(sls.theLoop, forEnv);
     for (let idx = start; idx <= end; idx++) {
-      enter = R.assignVar(sls.enterAssignment, forEnv, globalEnv, 'enter', enter + 1);
-      (R.send(sls.bodyCall, forEnv, body, 'call', [idx]), R.receive(body(idx)));
-      leave = R.assignVar(sls.leaveAssignment, forEnv, globalEnv, 'leave', leave + 1);
+      enter = R.assignVar(sls.enterAssignment, loopEnv, globalEnv, 'enter', enter + 1);
+      (R.send(sls.bodyCall, loopEnv, body, 'call', [idx]), R.receive(body(idx)));
+      leave = R.assignVar(sls.leaveAssignment, loopEnv, globalEnv, 'leave', leave + 1);
     }
+    R.leaveScope();
   }
 
   let g = R.declVar(sls.gDecl, globalEnv, 'g', 0);
@@ -107,7 +110,8 @@ addExample('seymour-nestedLoops', () => {
         'to: ', {name: 'endDecl', code: 'end'}, ' ',
         'do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
       '  ...\n',
-      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+      {name: 'theLoop', code: [
+        '  ', {name: 'bodyCall', code: 'body(idx)'}, ';']}, '\n',
       '  ...\n',
       '}']}, '\n\n',
     {name: 'countDecl', code: 'var count = 0;'}, '\n',
@@ -126,9 +130,11 @@ addExample('seymour-nestedLoops', () => {
     R.declVar(sls.thisDecl, forEnv, 'this', start);
     R.declVar(sls.endDecl, forEnv, 'end', end);
     R.declVar(sls.bodyDecl, forEnv, 'body', body);
+    const loopEnv = R.enterScope(sls.theLoop, forEnv);
     for (let idx = start; idx <= end; idx++) {
-      (R.send(sls.bodyCall, forEnv, body, 'call', [idx]), R.receive(body(idx)));
+      (R.send(sls.bodyCall, loopEnv, body, 'call', [idx]), R.receive(body(idx)));
     }
+    R.leaveScope();
   }
 
   let count = R.declVar(sls.countDecl, globalEnv, 'count', 0);
@@ -151,8 +157,8 @@ addExample('seymour-preEvents', () => {
       'def for ', {name: 'thisDecl', code: 'Number'}, ' ',
         'to: ', {name: 'endDecl', code: 'end'}, ' ',
         'do: ', {name: 'bodyDecl', code: 'body'}, ' {\n',
-      '  ...\n',
-      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';\n',
+      '  ...\n', {name: 'theLoop', code: [
+      '  ', {name: 'bodyCall', code: 'body(idx)'}, ';']}, '\n',
       '  ...\n',
       '}'
     ]},
@@ -186,9 +192,11 @@ addExample('seymour-preEvents', () => {
     R.declVar(sls.thisDecl, forEnv, 'this', start);
     R.declVar(sls.endDecl, forEnv, 'end', end);
     R.declVar(sls.bodyDecl, forEnv, 'body', body);
+    const loopEnv = R.enterScope(sls.theLoop, forEnv);
     for (let idx = start; idx <= end; idx++) {
-      (R.send(sls.bodyCall, forEnv, body, 'call', [idx]), R.receive(body(idx)));
+      (R.send(sls.bodyCall, loopEnv, body, 'call', [idx]), R.receive(body(idx)));
     }
+    R.leaveScope();
   }
 
   let g = R.declVar(sls.gDecl, globalEnv, 'g', 0);
@@ -228,24 +236,26 @@ addExample('seymour-blockCall', () => {
 
 addExample('js-for', () => {
   prog({name: 'program', code: [
-    {name: 'sumDecl', code: 'var sum = 0;'}, '\n',
+    {name: 'sumDecl', code: 'var sum = 0;'}, '\n', {name: 'theLoop', code: [
     'for (',
       {name: 'xDecl', code: 'let x = 0;'},
       ' x <= 3; ',
       {name: 'xAssignment', code: 'x = x + 1'}, ') {\n',
     '  ', {name: 'sumAssignment', code: 'sum = sum + x;'}, '\n',
-    '}'
+    '}']}
   ]});
 
   const R = new EventRecorder();
   globalEnv = R.program(sls.program);
   let sum = R.declVar(sls.sumDecl, globalEnv, 'sum', 0);
+  const loopEnv = R.enterScope(sls.theLoop, globalEnv);
   for (
-      let x = R.declVar(sls.xDecl, globalEnv, 'x', 1);
+      let x = R.declVar(sls.xDecl, loopEnv, 'x', 1);
       x <= 3;
-      x =  R.assignVar(sls.xAssignment, globalEnv, globalEnv, 'x', x + 1)) {
-    sum = R.assignVar(sls.sumAssignment, globalEnv, globalEnv, 'sum', sum + x);
+      x =  R.assignVar(sls.xAssignment, loopEnv, globalEnv, 'x', x + 1)) {
+    sum = R.assignVar(sls.sumAssignment, loopEnv, globalEnv, 'sum', sum + x);
   }
+  R.leaveScope();
 });
 
 addExample('js-fact', () => {
@@ -283,10 +293,10 @@ addExample('js-reduce', () => {
     {name: 'reduceAssignment', code: ['Array.prototype.reduce = ',
       {name: 'reduceFn', code: [
         'function', {name: 'thisDecl', code: '('}, {name: 'fnDecl', code: 'fn'}, ', ', {name: 'zDecl', code: 'z'}, ') {\n',
-        '  ', {name: 'rDecl', code: 'var r = z;'}, '\n',
+        '  ', {name: 'rDecl', code: 'var r = z;'}, '\n', {name: 'theLoop', code: [
         '  for (', {name: 'idxDecl', code: 'let idx = 0;'}, ' idx < this.length; ', {name: 'idxAssignment', code: 'idx = idx + 1'}, ') {\n',
         '    ', {name: 'rAssignment', code: ['r = ', {name: 'fnCall', code: 'fn(r, this[idx])'}, ';']}, '\n',
-        '  }\n',
+        '  }']}, '\n',
         '  ', {name: 'reduceReturn', code: 'return r;'}, '\n',
         '}'
       ]}, ';']}, '\n\n',
@@ -306,12 +316,14 @@ addExample('js-reduce', () => {
     R.declVar(sls.fnDecl, reduceEnv, 'fn', fn);
     R.declVar(sls.zDecl, reduceEnv, 'z', z);
     let r = R.declVar(sls.rDecl, reduceEnv, 'r', z);
+    const loopEnv = R.enterScope(sls.theLoop, reduceEnv);
     for (
-        let idx = R.declVar(sls.idxDecl, reduceEnv, 'idx', 0);
+        let idx = R.declVar(sls.idxDecl, loopEnv, 'idx', 0);
         idx < this.length;
-        idx = R.assignVar(sls.idxAssignment, reduceEnv, reduceEnv, 'idx', idx + 1)) {
-      r = R.assignVar(sls.rAssignment, reduceEnv, reduceEnv, 'r', (R.send(sls.fnCall, reduceEnv, fn, 'call', [r, this[idx]]), R.receive(fn(r, this[idx]))));
+        idx = R.assignVar(sls.idxAssignment, loopEnv, reduceEnv, 'idx', idx + 1)) {
+      r = R.assignVar(sls.rAssignment, loopEnv, reduceEnv, 'r', (R.send(sls.fnCall, loopEnv, fn, 'call', [r, this[idx]]), R.receive(fn(r, this[idx]))));
     }
+    R.leaveScope();
     return R.return(sls.reduceReturn, reduceEnv, r);
   });
   const arr = [1, 2, 3, 4];
