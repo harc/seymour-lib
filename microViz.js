@@ -63,27 +63,24 @@ function renderMicroViz(env) {
   }
 
   function fixHeights() {
-    const elements = [].slice.call(document.querySelectorAll('#microVizDiv *[startLine][endLine]'));
+    const $ = document.querySelector.bind(document);
+    const $$ = s => [].slice.call(document.querySelectorAll(s));
+
     for (let lineNumber = 1; lineNumber <= lines.length; lineNumber++) {
-      const bottom = elements.
-          filter(element => element.getAttribute('endLine') == lineNumber).
+      const bottom = $$('#microVizDiv *[endLine="' + lineNumber + '"]').
           map(element => element.getBoundingClientRect().bottom).
           reduce((x, y) => Math.max(x, y));
 
-      const line =
-          document.querySelector('#microVizDiv program line[startLine="' + lineNumber + '"]');
+      const line = $('#microVizDiv program line[startLine="' + lineNumber + '"]');
       inflate(line, bottom);
 
-      const spacers = [].slice.call(
-          document.querySelectorAll('#microVizDiv spacer[endLine="' + lineNumber + '"]'));
+      const spacers = $$('#microVizDiv spacer[endLine="' + lineNumber + '"]');
       spacers.forEach(spacer => inflate(spacer, bottom));
 
-      const localEvents = [].slice.call(
-          document.querySelectorAll('#microVizDiv event[endLine="' + lineNumber + '"]:not(.remote)'));
+      const localEvents = $$('#microVizDiv event[endLine="' + lineNumber + '"]:not(.remote)');
       localEvents.forEach(event => inflate(event, bottom));
 
-      const remoteEventGroups = [].slice.call(
-          document.querySelectorAll('#microVizDiv remoteEventGroup[endLine="' + lineNumber + '"]'));
+      const remoteEventGroups = $$('#microVizDiv remoteEventGroup[endLine="' + lineNumber + '"]');
       remoteEventGroups.forEach(remoteEventGroup => inflate(remoteEventGroup, bottom));
     }
   }
