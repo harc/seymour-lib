@@ -37,7 +37,7 @@ function renderMicroViz(env) {
       let lastPopulatedLineNumber = sourceLoc.startLineNumber - 1;
       const children = [];
       let lastEventNode = null;
-      let lastWrapperInfo = null;
+      let lastEventOrWrapperNodeInfo = null;
       thing.events.forEach((event, idx) => {
         const firstInLine = event.sourceLoc.startLineNumber > lastPopulatedLineNumber;
         if (firstInLine) {
@@ -48,10 +48,24 @@ function renderMicroViz(env) {
             lastPopulatedLineNumber++;
             children.push(d('spacer', {startLine: lastPopulatedLineNumber, endLine: lastPopulatedLineNumber}));
           }
+          lastEventNode = renderMicroViz(event, event.sourceLoc, 'firstInLine');
+          lastEventOrWrapperNodeInfo = event.sourceLoc;
+          children.push(lastEventNode);
+        } else if (event.sourceLoc.startLineNumber === lastEventOrWrapperNodeInfo.startLineNumber) {
+          lastEventNode = renderMicroViz(event, event.sourceLoc);
+          lastEventOrWrapperNodeInfo = event.sourceLoc;
+          children.push(lastEventNode);
+        } else {
+          const startLineNumber = lastEventOrWrapperNodeInfo.startLineNumber;
+          lastEventNode = renderMicroViz(event, event.sourceLoc, 'firstInLine');
+          const wrapperNode = d('wrapper', {},
+              ...range(startLineNumber, event.sourceLoc.startLineNumber - 1).
+                  map(lineNumber => d('spacer', {startLine: lineNumber, endLine: lineNumber})),
+              lastEventNode);
+          lastEventOrWrapperNodeInfo = {startLineNumber: startLineNumber, endLineNumber: event.sourceLoc.endLineNumber};
+          children.push(wrapperNode);
         }
-        lastEventNode = renderMicroViz(event, event.sourceLoc, firstInLine ? 'firstInLine' : '');
-        children.push(lastEventNode);
-        lastPopulatedLineNumber = event.sourceLoc.endLineNumber;
+        lastPopulatedLineNumber = lastEventOrWrapperNodeInfo.endLineNumber;
       });
       if (lastEventNode) {
         lastEventNode.classList.add('lastInLine');

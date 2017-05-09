@@ -147,6 +147,7 @@ macroVizNode > label {
 
 /* only debugging stuff past this point */
 
+/*
 #microVizDiv localEventGroup,
 #microVizDiv remoteEventGroup {
   border: 1px solid cornflowerblue;
@@ -164,6 +165,7 @@ macroVizNode > label {
   content: '(spacer)';
   color: hsl(0, 0%, 70%);
 }
+*/
 
 /* ------------------------------------ */
 
