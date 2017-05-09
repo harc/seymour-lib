@@ -28,6 +28,9 @@ function renderMicroViz(env) {
     if (thing instanceof Event) {
       return d('event', attributes, thing.toMicroVizString());
     } else if (thing instanceof MicroVizEvents && thing.eventGroups.length > 0) {
+      if (thing.eventGroups.length > 1) {
+        attributes.loopy = true;
+      }
       return d('send', attributes, ...thing.eventGroups.map(eg => renderMicroViz(eg, sourceLoc)));
     } else if (thing instanceof MicroVizEvents && thing.eventGroups.length === 0) {
       attributes.empty = true;

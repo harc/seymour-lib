@@ -95,6 +95,12 @@ macroVizNode > label {
   float: left;
 }
 
+#microVizDiv send[loopy="true"] {
+  border-radius: 4px;
+  background: rgba(100, 149, 237, .05);
+  box-shadow: 1px 1px 2px #ddd;
+}
+
 #microVizDiv send[empty="true"] > remoteEventGroup > emptySendDot {
   color: hsl(0, 0%, 30%);
 }
