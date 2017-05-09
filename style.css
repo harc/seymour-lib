@@ -89,14 +89,13 @@ macroVizNode > label {
 #microVizDiv send,
 #microVizDiv localEventGroup,
 #microVizDiv remoteEventGroup,
-#microVizDiv spacerGroup,
-#microVizDiv spacer {
+#microVizDiv spacer,
+#microVizDiv wrapper {
   display: inline-block;
   float: left;
 }
 
-#microVizDiv send[empty="true"]::before {
-  content: '\b7';
+#microVizDiv send[empty="true"] > remoteEventGroup > emptySendDot {
   color: hsl(0, 0%, 30%);
 }
 
@@ -124,8 +123,8 @@ macroVizNode > label {
   margin-left: -10px;
 }
 
-#microVizDiv localEventGroup[isNewIteration="true"],
-#microVizDiv remoteEventGroup[isNewIteration="true"] {
+#microVizDiv localEventGroup:nth-child(1n+2),
+#microVizDiv remoteEventGroup:nth-child(1n+2) {
   border-left: 1px dashed #aaa;
 }
 
@@ -148,7 +147,6 @@ macroVizNode > label {
 
 /* only debugging stuff past this point */
 
-/*
 #microVizDiv localEventGroup,
 #microVizDiv remoteEventGroup {
   border: 1px solid cornflowerblue;
@@ -162,17 +160,10 @@ macroVizNode > label {
   padding: 1px;
 }
 
-#microVizDiv spacerGroup {
-  border: 1px solid green;
-  border-radius: 4px;
-  padding: 1px;
-}
-
 #microVizDiv spacer::after {
   content: '(spacer)';
   color: hsl(0, 0%, 70%);
 }
-*/
 
 /* ------------------------------------ */
 

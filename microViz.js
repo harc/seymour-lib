@@ -31,37 +31,37 @@ function renderMicroViz(env) {
       return d('send', attributes, ...thing.eventGroups.map(eg => renderMicroViz(eg, sourceLoc)));
     } else if (thing instanceof MicroVizEvents && thing.eventGroups.length === 0) {
       attributes.empty = true;
-      return d('send', attributes,
-          d('spacerGroup', {},
-              ...range(sourceLoc.startLineNumber, sourceLoc.endLineNumber).map(
-                  line => d('spacer', {startLine: line, endLine: line}))));
+      return d('send', attributes, d('remoteEventGroup', attributes,
+          d('emptySendDot', {}, '\u00b7')));
     } else if (thing instanceof LocalEventGroup) {
-      let currLine = sourceLoc.startLineNumber;
+      let lastPopulatedLineNumber = sourceLoc.startLineNumber - 1;
       const children = [];
       let lastEventNode = null;
-      thing.events.forEach(event => {
-        const firstInLine = event.sourceLoc.startLineNumber >= currLine;
-        if (lastEventNode && firstInLine) {
-          lastEventNode.classList.add('lastInLine');
-        }
-        while (currLine < event.sourceLoc.startLineNumber) {
-          children.push(d('spacer', {startLine: currLine, endLine: currLine}));
-          currLine++;
+      let lastWrapperInfo = null;
+      thing.events.forEach((event, idx) => {
+        const firstInLine = event.sourceLoc.startLineNumber > lastPopulatedLineNumber;
+        if (firstInLine) {
+          if (lastEventNode) {
+            lastEventNode.classList.add('lastInLine');
+          }
+          while (event.sourceLoc.startLineNumber !== lastPopulatedLineNumber + 1) {
+            lastPopulatedLineNumber++;
+            children.push(d('spacer', {startLine: lastPopulatedLineNumber, endLine: lastPopulatedLineNumber}));
+          }
         }
         lastEventNode = renderMicroViz(event, event.sourceLoc, firstInLine ? 'firstInLine' : '');
         children.push(lastEventNode);
-        currLine = event.sourceLoc.endLineNumber + 1;
+        lastPopulatedLineNumber = event.sourceLoc.endLineNumber;
       });
       if (lastEventNode) {
         lastEventNode.classList.add('lastInLine');
       }
-      while (currLine <= sourceLoc.endLineNumber) {
-        children.push(d('spacer', {startLine: currLine, endLine: currLine}));
-        currLine++;
+      while (lastPopulatedLineNumber < sourceLoc.endLineNumber) {
+        lastPopulatedLineNumber++;
+        children.push(d('spacer', {startLine: lastPopulatedLineNumber, endLine: lastPopulatedLineNumber}));
       }
-      return d('localEventGroup', {isNewIteration: thing.isNewIteration}, ...children);
+      return d('localEventGroup', {}, ...children);
     } else if (thing instanceof RemoteEventGroup) {
-      attributes.isNewIteration = thing.isNewIteration;
       return d('remoteEventGroup', attributes,
           ...thing.events.map(e => renderMicroViz(e, sourceLoc, 'remote firstInLine lastInLine')));
     } else {
