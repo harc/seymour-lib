@@ -74,11 +74,15 @@ macroVizNode > label {
 #microVizDiv > program {
   display: inline-block;
   float: left;
-  margin-right: 10px;
 }
 
 #microVizDiv > program > line {
   display: block;
+  padding-right: 10px;
+}
+
+#microVizDiv > program > line:nth-child(2n) {
+  background: #fbfbfb;
 }
 
 #microVizDiv > program > line > text {
