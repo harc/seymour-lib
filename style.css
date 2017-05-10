@@ -1,5 +1,4 @@
 body {
-  width: 10000;
   font-family: futura;
   font-size: 8pt;
 }
@@ -28,6 +27,14 @@ a.exampleButton.selected {
 
 /* ------------------------------------ */
 
+#macroVizDivContainer {
+  overflow: scroll;
+}
+
+#macroVizDiv {
+  white-space: nowrap;
+}
+
 macroViz {
   display: block;
 }
@@ -52,8 +59,13 @@ macroVizNode > label {
 
 /* ------------------------------------ */
 
+#microVizDivContainer {
+  overflow: scroll;
+}
+
 #microVizDiv {
   display: inline-block;
+  white-space: nowrap;
   font-family: monospace;
   line-height: 1.4;
   margin: 10px 0;
