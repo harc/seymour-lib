@@ -1,3 +1,5 @@
+* Implement subsumption in RemoteEventGroup
+
 * Figure out "compositing", i.e., how to show info from other (parent) envs
 
 * Figure out how to deal with new and init
