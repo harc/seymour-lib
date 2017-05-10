@@ -23,6 +23,10 @@ class Event {
       return JSON.stringify(v);
     }
   }
+
+  subsumes(that) {
+    return false;
+  }
 }
 
 class ProgramEvent extends Event {

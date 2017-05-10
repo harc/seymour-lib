@@ -31,13 +31,12 @@ class MicroVizEvents {
 }
 
 class AbstractEventGroup {
-  constructor() {
-    this.events = [];
+  constructor(events) {
+    this.events = events;
   }
 
   add(event) {
-    this.events.push(event);
-    return this;
+    throw new Error('abstract method!');
   }
 
   get lastEvent() {
@@ -45,5 +44,28 @@ class AbstractEventGroup {
   }
 }
 
-class LocalEventGroup extends AbstractEventGroup {}
-class RemoteEventGroup extends AbstractEventGroup {}
+class LocalEventGroup extends AbstractEventGroup {
+  constructor(...events) {
+    super(events);
+  }
+
+  add(event) {
+    this.events.push(event);
+  }
+}
+
+class RemoteEventGroup extends AbstractEventGroup {
+  constructor(...events) {
+    super(events);
+  }
+
+  add(event) {
+    for (let idx = 0; idx < this.events.length; idx++) {
+      if (event.subsumes(this.events[idx])) {
+        this.events[idx] = event;
+        return;
+      }
+    }
+    this.events.push(event);
+  }
+}

@@ -4,7 +4,7 @@ function renderMicroViz(env) {
   let microVizEvents;
   if (env.callerEnv) {
     microVizEvents = new MicroVizEvents(globalEnv.programOrSendEvent, globalEnv.sourceLoc);
-    microVizEvents.eventGroups = [new LocalEventGroup().add(env.microVizEvents)];
+    microVizEvents.eventGroups = [new LocalEventGroup(env.microVizEvents)];
   } else {
     microVizEvents = env.microVizEvents;
   }
