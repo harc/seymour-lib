@@ -86,6 +86,8 @@ macroVizNode > label {
 }
 
 #microVizDiv > program > line > number {
+  display: inline-block;
+  width: 20pt;
   text-align: right;
   padding-right: 10px;
   color: cornflowerblue;
