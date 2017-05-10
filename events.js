@@ -66,6 +66,11 @@ class VarAssignmentEvent extends Event {
     this.value = value;
   }
 
+  subsumes(that) {
+    return (that instanceof VarAssignmentEvent || that instanceof VarDeclEvent) &&
+        this.name === that.name && this.declEnv === that.declEnv;
+  }
+
   toMicroVizString() {
     return this.name + ' = ' + this._valueString(this.value);
   }
@@ -77,6 +82,11 @@ class InstVarAssignmentEvent extends Event {
     this.obj = obj;
     this.name = name;
     this.value = value;
+  }
+
+  subsumes(that) {
+    return that instanceof InstVarAssignmentEvent &&
+        this.receiver === that.receiver && this.name === that.name;
   }
 
   toMicroVizString() {
