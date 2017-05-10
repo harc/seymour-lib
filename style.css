@@ -155,10 +155,15 @@ macroVizNode > label {
 
 /*
 #microVizDiv localEventGroup,
-#microVizDiv remoteEventGroup {
+#microVizDiv remoteEventGroup,
+#microVizDiv wrapper {
   border: 1px solid cornflowerblue;
   border-radius: 4px;
   padding: 1px;
+}
+
+#microVizDiv wrapper {
+  border-color: red;
 }
 
 #microVizDiv send {

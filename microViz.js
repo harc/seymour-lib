@@ -40,42 +40,56 @@ function renderMicroViz(env) {
       let lastPopulatedLineNumber = sourceLoc.startLineNumber - 1;
       const children = [];
       let lastEventNode = null;
-      let lastEventOrWrapperNodeInfo = null;
-      thing.events.forEach((event, idx) => {
-        const firstInLine = event.sourceLoc.startLineNumber > lastPopulatedLineNumber;
-        if (firstInLine) {
+      thing.events.forEach((event, idx, events) => {
+        const lastEvent = events[idx - 1];
+        if (event.sourceLoc.startLineNumber > lastPopulatedLineNumber) {
+          range(lastPopulatedLineNumber + 1, event.sourceLoc.startLineNumber - 1).
+              forEach(lineNumber => children.push(mkSpacer(lineNumber)));
           if (lastEventNode) {
             lastEventNode.classList.add('lastInLine');
           }
-          while (event.sourceLoc.startLineNumber !== lastPopulatedLineNumber + 1) {
-            lastPopulatedLineNumber++;
-            children.push(d('spacer', {startLine: lastPopulatedLineNumber, endLine: lastPopulatedLineNumber}));
-          }
           lastEventNode = renderMicroViz(event, event.sourceLoc, 'firstInLine');
-          lastEventOrWrapperNodeInfo = event.sourceLoc;
+          lastPopulatedLineNumber = event.sourceLoc.endLineNumber;
           children.push(lastEventNode);
-        } else if (event.sourceLoc.startLineNumber === lastEventOrWrapperNodeInfo.startLineNumber) {
+        } else if (event.sourceLoc.startLineNumber === startLine(children[children.length - 1])) {
           lastEventNode = renderMicroViz(event, event.sourceLoc);
-          lastEventOrWrapperNodeInfo = event.sourceLoc;
+          lastPopulatedLineNumber =
+              Math.max(lastPopulatedLineNumber, event.sourceLoc.endLineNumber);
           children.push(lastEventNode);
+        } else if (event.sourceLoc.startLineNumber > startLine(children[children.length - 1])) {
+          lastEventNode = renderMicroViz(event, event.sourceLoc);
+          lastEventNode.style.clear = 'left';
+          lastPopulatedLineNumber =
+              Math.max(lastPopulatedLineNumber, event.sourceLoc.endLineNumber);
+          const spacers =
+              range(startLine(children[children.length - 1]), event.sourceLoc.startLineNumber - 1).
+              map(mkSpacer);
+          children.push(mkWrapper(...spacers, lastEventNode));
+        } else if (event.sourceLoc.startLineNumber < startLine(children[children.length - 1])) {
+          const nodesToWrap = [];
+          while (event.sourceLoc.startLineNumber <= startLine(children[children.length - 1])) {
+            nodesToWrap.unshift(children.pop());
+          }
+          children.push(mkWrapper(...nodesToWrap));
+          /* same as case above */
+          lastEventNode = renderMicroViz(event, event.sourceLoc);
+          lastEventNode.style.clear = 'left';
+          lastPopulatedLineNumber =
+              Math.max(lastPopulatedLineNumber, event.sourceLoc.endLineNumber);
+          const spacers =
+              range(startLine(children[children.length - 1]), event.sourceLoc.tartLineNumber - 1).
+              map(mkSpacer);
+          children.push(mkWrapper(...spacers, lastEventNode));
         } else {
-          const startLineNumber = lastEventOrWrapperNodeInfo.startLineNumber;
-          lastEventNode = renderMicroViz(event, event.sourceLoc, 'firstInLine');
-          const wrapperNode = d('wrapper', {},
-              ...range(startLineNumber, event.sourceLoc.startLineNumber - 1).
-                  map(lineNumber => d('spacer', {startLine: lineNumber, endLine: lineNumber})),
-              lastEventNode);
-          lastEventOrWrapperNodeInfo = {startLineNumber: startLineNumber, endLineNumber: event.sourceLoc.endLineNumber};
-          children.push(wrapperNode);
+          throw new Error('impossible!');
         }
-        lastPopulatedLineNumber = lastEventOrWrapperNodeInfo.endLineNumber;
       });
       if (lastEventNode) {
         lastEventNode.classList.add('lastInLine');
       }
       while (lastPopulatedLineNumber < sourceLoc.endLineNumber) {
         lastPopulatedLineNumber++;
-        children.push(d('spacer', {startLine: lastPopulatedLineNumber, endLine: lastPopulatedLineNumber}));
+        children.push(mkSpacer(lastPopulatedLineNumber));
       }
       return d('localEventGroup', {}, ...children);
     } else if (thing instanceof RemoteEventGroup) {
@@ -85,6 +99,31 @@ function renderMicroViz(env) {
       throw new Error('not sure how to renderMicroViz ' + JSON.stringify(thing));
     }
     return node;
+  }
+
+  function startLine(node) {
+    return parseInt(node.getAttribute('startLine'));
+  }
+
+  function endLine(node) {
+    return parseInt(node.getAttribute('endLine'));
+  }
+
+  function mkSpacer(lineNumber) {
+    return d('spacer', {startLine: lineNumber, endLine: lineNumber});
+  }
+
+  function mkWrapper(...nodes) {
+    const wrapper = d('wrapper',
+        { startLine: startLine(nodes[0]), endLine: endLine(nodes[nodes.length - 1]) },
+        ...nodes);
+    if (nodes[0].classList.contains('firstInLine')) {
+      wrapper.classList.add('firstInLine');
+    }
+    if (nodes[nodes.length - 1].classList.contains('lastInLine')) {
+      wrapper.classList.add('lastInLine');
+    }
+    return wrapper;
   }
 
   function fixHeights() {
