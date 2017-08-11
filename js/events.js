@@ -118,3 +118,10 @@ class ReturnEvent extends Event {
     return 'return ' + this._valueString(this.value);
   }
 }
+
+class ReceiveEvent extends Event {
+  constructor(sourceLoc, env, returnValue) {
+    super(sourceLoc, env)
+    this.returnValue = returnValue
+  }
+}

@@ -3,6 +3,7 @@
 class EventRecorder {
   constructor(newEventHandler) {
     this.eventStack = [];  // ProgramEvent SendEvent*
+    this.lastEvent = null;
   }
 
   get topOfEventStack() {
@@ -12,12 +13,15 @@ class EventRecorder {
   program(sourceLoc) {
     const event = new ProgramEvent(sourceLoc);
     this.eventStack.push(event);
+    this.lastEvent = event;
     return this.mkEnv(sourceLoc);
   }
 
   send(sourceLoc, env, recv, selector, args) {
+    debugger;
     const event = new SendEvent(sourceLoc, env, recv, selector, args);
     this.eventStack.push(event);
+    this.lastEvent = event;
     // this event is only sent to event handler after it gets an activation environment (see below)
   }
 
@@ -59,30 +63,35 @@ class EventRecorder {
 
   return(sourceLoc, env, value) {
     const event = new ReturnEvent(sourceLoc, env, value);
+    this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
-  declVar(sourceLoc, env, name, value) {
+  declVar(sourceLoc, env, /*declEnv, */name, value) { // TODO: allow for declEnv
     const event = new VarDeclEvent(sourceLoc, env, name, value);
+    this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
   assignVar(sourceLoc, env, declEnv, name, value) {
     const event = new VarAssignmentEvent(sourceLoc, env, declEnv, name, value);
+    this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
   assignInstVar(sourceLoc, env, obj, name, value) {
     const event = new InstVarAssignmentEvent(sourceLoc, env, obj, name, value);
+    this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
   instantiate(sourceLoc, env, _class, args, newInstance) {
     const event = new InstantiationEvent(sourceLoc, env, _class, args, newInstance);
+    this.lastEvent = event;
     this._emit(event);
     return newInstance;
   }

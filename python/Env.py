@@ -1,3 +1,5 @@
+import json
+
 class Env(object):
   nextId = 0
 
@@ -25,8 +27,11 @@ class Env(object):
     return self.declEnvs.get(name)
   
   def toJSON(self):
-    return {
+    return json.dumps({
+      'type': 'Env',
       'id': self.id,
       'parentEnvId': self.parentEnv.id if self.parentEnv != None else None,
-      'callerEnvId': self.callerEnv.id if self.callerEnv != None else None
-    }
+      'callerEnvId': self.callerEnv.id if self.callerEnv != None else None,
+      'sourceLoc': self.sourceLoc,
+      'programOrSendEventId': self.programOrSendEvent.id
+    })

@@ -1,24 +1,28 @@
-from events import ProgramEvent, VarDeclEvent, VarAssignmentEvent, SendEvent, LocalReturnEvent
+import json
+import time
+
+from events import ProgramEvent, VarDeclEvent, VarAssignmentEvent, SendEvent, LocalReturnEvent, ReceiveEvent
 from Env import Env
 
 class EventRecorder(object):
-  def __init__(self):
+  def __init__(self, websocket):
     self.currentProgramOrSendEvent = None
+    self.websocket = websocket
   
-  def program(self, sourceLoc): ##
+  async def program(self, sourceLoc): ##
     event = ProgramEvent(sourceLoc)
     self.currentProgramOrSendEvent = event
-    env = self.mkEnv(sourceLoc, None)
-    self._emit(event)
+    await self._emit(event)
+    env = await self.mkEnv(sourceLoc, None)
     return env
 
-  def send(self, sourceLoc, env, recv, selector, args, activationPathToken): ##
+  async def send(self, sourceLoc, env, recv, selector, args, activationPathToken): ##
     event = SendEvent(sourceLoc, env, recv, selector, args, activationPathToken)
-    self._emit(event)
+    await self._emit(event)
     env.currentSendEvent = event
     self.currentProgramOrSendEvent = event
 
-  def mkEnv(self, newEnvSourceLoc, parentEnv): ##
+  async def mkEnv(self, newEnvSourceLoc, parentEnv): ##
     programOrSendEvent = self.currentProgramOrSendEvent;
     callerEnv = programOrSendEvent.env
     newEnv = Env(newEnvSourceLoc, parentEnv, callerEnv, programOrSendEvent)
@@ -35,42 +39,50 @@ class EventRecorder(object):
       if parentEvent != None:
         parentEvent.children.append(programOrSendEvent)
     
+    print('env')
+    await self.websocket.send(newEnv.toJSON())
     return newEnv
   
-  def receive(self, env, returnValue): ##
+  async def receive(self, env, returnValue): ## make this an event
+    event = ReceiveEvent(env, returnValue)
     env.currentSendEvent.returnValue = returnValue
     self.currentProgramOrSendEvent = env.programOrSendEvent
+    await self._emit(event)
     return returnValue
   
-  def _emit(self, event):
+  async def _emit(self, event):
     print(event.toMicroVizString())
+    await self.websocket.send(event.toJSON())
   
-  def show(self, sourceLoc, env, string, alt):
+  async def show(self, sourceLoc, env, string, alt):
     pass
   
-  def error(self, sourceLoc, env, errorString):
+  async def error(self, sourceLoc, env, errorString):
     pass
   
-  def localReturn(self, sourceLoc, env, value): ##
+  async def localReturn(self, sourceLoc, env, value): ##
     event = LocalReturnEvent(sourceLoc, env, value)
-    self._emit(event)
+    await self._emit(event)
     return value
   
-  def nonLocalReturn(self, sourceLoc, env, value):
+  async def nonLocalReturn(self, sourceLoc, env, value):
     pass
   
-  def assignVar(self, sourceLoc, env, name, value):
+  async def assignVar(self, sourceLoc, env, name, value): # add declEnv
     if env.declEnv(name):
       declEnv = env.declEnv(name)
       event = VarAssignmentEvent(sourceLoc, env, declEnv, name, value)
     else:
       declEnv = env.declVar(name)
       event = VarDeclEvent(sourceLoc, env, name, value)
-    self._emit(event)
+    await self._emit(event)
     return value
   
-  def assignInstVar(self, sourceLoc, env, obj, name, value):
+  async def assignInstVar(self, sourceLoc, env, obj, name, value):
     pass
   
-  def instantiate(sourceLoc, env, _class, args, newInstance):
+  async def instantiate(sourceLoc, env, _class, args, newInstance):
     pass
+  
+  async def done(self):
+    await self.websocket.send(json.dumps({'type': 'done'}))

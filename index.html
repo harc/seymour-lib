@@ -1,6 +1,7 @@
 <html>
   <body>
     <head><title>Seymour-Lib</title></head>
+    <script src="node_modules/checked-emitter/dist/checked-emitter.js"></script>
     <script src="js/Env.js"></script>
     <script src="js/EventRecorder.js"></script>
     <script src="js/MicroVizEvents.js"></script>
@@ -35,6 +36,66 @@ function addExample(name, setupFn) {
 }
 
 let globalEnv;
+
+const envs = {};
+const events = {};
+const eventArgOrders = {
+  ProgramEvent: ['sourceLoc'],
+  SendEvent: ['sourceLoc', 'envId', 'recv', 'selector', 'args'],
+  VarDeclEvent: ['sourceLoc', 'envId', 'name', 'value'],
+  VarAssignmentEvent: ['sourceLoc', 'envId', 'declEnvId', 'name', 'value'],
+  ReceiveEvent: ['sourceLoc', 'envId', 'returnValue'], // fix thing
+  LocalReturnEvent: ['sourceLoc', 'envId', 'value']
+};
+const eventMethods = {
+  ProgramEvent: 'program',
+  SendEvent: 'send',
+  VarDeclEvent: 'declVar',
+  VarAssignmentEvent: 'assignVar',
+  ReceiveEvent: 'receive',
+  LocalReturnEvent: 'localReturn'
+};
+
+function makeSourceLoc(json) {
+  if (json === null) {
+    return null;
+  }
+  return new SourceLoc(
+    json.startPos,
+    json.endPos,
+    json.startLineNumber,
+    json.endLineNumber,
+    json.name
+  )
+}
+
+function fixupEnv(envJSON) {
+  const env = new Env(
+    makeSourceLoc(envJSON.sourceLoc),
+    envs[envJSON.callerEnvId],
+    events[envJSON.programOrSendEventId]
+  );
+  if (env.programOrSendEvent instanceof ProgramEvent) {
+    globalEnv = env;
+  }
+  return env;
+}
+
+function fixupEvent(R, eventJSON) {
+  const args = [];
+  eventArgOrders[eventJSON.type].forEach(key => {
+    if (key.includes('Env') || key.includes('env')) {
+      args.push(envs[eventJSON[key]]);
+    } else if (key === 'sourceLoc') {
+      args.push(makeSourceLoc(eventJSON.sourceLoc))
+    } else {
+      args.push(eventJSON[key]);
+    }
+  });
+  R[eventMethods[eventJSON.type]](...args);
+  R.lastEvent.id = eventJSON.id;
+  events[R.lastEvent.id] = R.lastEvent;
+}
 
 addExample('seymour-for', () => {
   prog({name: 'program', code: [
@@ -270,7 +331,7 @@ addExample('seymour-preEvents', () => {
   function f() {
     const fEnv = R.mkEnv(sls.fDef);
     g = R.assignVar(sls.gAssignment, fEnv, globalEnv, 'g', g + 1);
-    return R.return(sls.fReturn, fEnv, g);
+    return R.localReturn(sls.fReturn, fEnv, g);
   }
 
   let sum = R.declVar(sls.sumDecl, globalEnv, 'sum', 0);
@@ -306,7 +367,7 @@ addExample('emptySends', () => {
 
   function f() {
     const fEnv = R.mkEnv(sls.fDef);
-    return R.return(sls.fReturn, fEnv, 42);
+    return R.localReturn(sls.fReturn, fEnv, 42);
   }
 
   (R.send(sls.fCall1, globalEnv, f, 'call', []), R.receive(f()));
@@ -377,6 +438,134 @@ addExample('js-for', () => {
   R.leaveScope();
 });
 
+addExample('python-fib', () => {
+  prog({name: 'program', code: [
+    {name: 'fibDef', code: ['def fib(', {name: 'nDecl', code: 'n'}, '):\n',
+    '  if n < 2:\n',
+    '    ', {name: 'baseReturn', code: 'return n'}, '\n',
+    '  else:\n',
+    '    ', {name: 'faDecl', code: ['fa = ', {name: 'faCall', code: 'fib(n-1)'}]}, '\n',
+    '    ', {name: 'fbDecl', code: ['fb = ', {name: 'fbCall', code: 'fib(n-2)'}]}, '\n',
+    '    ', {name: 'recReturn', code: 'return fa + fb'}, '\n',
+    ]},
+    '\n\n',
+    {name: 'theLoop', code: [
+    'for ', {name: 'xDecl', code: 'x'}, ' in ', {name: 'range', code: 'range(5)'}, ': \n',
+    '  ', {name: 'fxDecl', code: ['fx = ', {name: 'fibCall', code: 'fib(x)'}]}, '\n'
+    ]}
+  ]});
+
+  const instrumentedCode = `
+global runCode
+async def runCode():
+  global ws
+  R = EventRecorder(ws)
+  
+  globalEnv = await R.program(sls['program'])
+  
+  async def fib(n):
+    fEnv = await R.mkEnv(sls['fibDef'], globalEnv)
+    await R.assignVar(sls['nDecl'], fEnv, 'n', n)
+    if n < 2: 
+      return await R.localReturn(sls['baseReturn'], fEnv, n)
+    else:
+      fa = await R.assignVar(sls['faDecl'], fEnv, 'fa', 
+        (await R.send(sls['faCall'] , fEnv, None, 'fib', [n-1], None), await R.receive(fEnv, await fib(n-1)))[1])
+      fb = await R.assignVar(sls['fbDecl'], fEnv, 'fb', 
+        (await R.send(sls['fbCall'], fEnv, None, 'fib', [n-2], None), await R.receive(fEnv, await fib(n-2)))[1])
+      return await R.localReturn(sls['recReturn'], fEnv, fa + fb)
+
+  for x in range(5):
+    await R.assignVar(sls['xDecl'], globalEnv, 'x', x)
+    fx = await R.assignVar(sls['fxDecl'], globalEnv, 'fx', 
+      (await R.send(sls['fibCall'], globalEnv, None, 'fib', [x], None), await R.receive(globalEnv, await fib(x)))[1])
+  
+  await R.done()
+`;
+
+  const R = new EventRecorder();
+
+  const socket = new WebSocket('ws://localhost:8001');
+  socket.addEventListener('message', (e) => { 
+    const data = JSON.parse(e.data); 
+    console.log(data); 
+    switch(data.type) {
+      case 'Env':
+        envs[data.id] = fixupEnv(data);
+        break;
+      case 'done':
+        renderMicroViz(globalEnv);
+        renderMacroViz(globalEnv);
+        break;
+      default:
+        fixupEvent(R, data)
+    }
+  });
+  socket.addEventListener('open', () => {
+    socket.send(JSON.stringify({
+      type: 'run',
+      sourceLocs: sls, 
+      code: instrumentedCode
+    }));
+  });
+
+});
+
+addExample('python-for', () => {
+  prog({name: 'program', code: [
+    {name: 'sumDecl', code: 'sum = 0'}, '\n', {name: 'theLoop', code: [
+    'for ',
+      {name: 'xDecl', code: 'x'},
+      ' in ',
+      {name: 'range', code: 'range(3)'}, ': \n',
+    '  ', {name: 'sumAssignment', code: 'sum = sum + x'}, '\n'
+    ]}
+  ]});
+
+  const instrumentedCode = `
+global runCode
+async def runCode():
+  global ws
+  R = EventRecorder(ws)
+  globalEnv = await R.program(sls['program'])
+
+  sum = await R.assignVar(sls['sumDecl'], globalEnv, 'sum', 0)
+
+  for x in (await R.send(sls['range'], globalEnv, None, 'range', [3], None), await R.receive(globalEnv, range(3)))[1]:
+    await R.assignVar(sls['xDecl'], globalEnv, 'x', x)
+    sum = await R.assignVar(sls['sumAssignment'], globalEnv, 'sum', sum + x)
+
+  await R.done()
+`;
+
+const R = new EventRecorder();
+
+const socket = new WebSocket('ws://localhost:8001');
+socket.addEventListener('message', (e) => { 
+  const data = JSON.parse(e.data); 
+  console.log(data); 
+  switch(data.type) {
+    case 'Env':
+      envs[data.id] = fixupEnv(data);
+      break;
+    case 'done':
+      renderMicroViz(globalEnv);
+      renderMacroViz(globalEnv);
+      break;
+    default:
+      fixupEvent(R, data)
+  }
+});
+socket.addEventListener('open', () => {
+  socket.send(JSON.stringify({
+    type: 'run',
+    sourceLocs: sls, 
+    code: instrumentedCode
+  }));
+});
+
+});
+
 addExample('js-fact', () => {
   prog({name: 'program', code: [
     {name: 'fDef', code: ['function f(', {name: 'nDecl', code: 'n'}, ') {\n',
@@ -397,10 +586,10 @@ addExample('js-fact', () => {
     const fEnv = R.mkEnv(sls.fDef);
     R.declVar(sls.nDecl, fEnv, 'n', n);
     if (n === 0) {
-      return R.return(sls.baseReturn, fEnv, 1);
+      return R.localReturn(sls.baseReturn, fEnv, 1);
     } else {
       let m = R.declVar(sls.mDecl, fEnv, 'm', (R.send(sls.recFCall, fEnv, f, 'call', [n - 1]), R.receive(f(n - 1))));
-      return R.return(sls.recReturn, fEnv, n * m);
+      return R.localReturn(sls.recReturn, fEnv, n * m);
     }
   }
   let ans = R.declVar(sls.ansDecl, globalEnv, 'ans', (R.send(sls.fCall, globalEnv, f, 'call', [5]), R.receive(f(5))));
@@ -442,14 +631,14 @@ addExample('js-reduce', () => {
       r = R.assignVar(sls.rAssignment, loopEnv, reduceEnv, 'r', (R.send(sls.fnCall, loopEnv, fn, 'call', [r, this[idx]]), R.receive(fn(r, this[idx]))));
     }
     R.leaveScope();
-    return R.return(sls.reduceReturn, reduceEnv, r);
+    return R.localReturn(sls.reduceReturn, reduceEnv, r);
   });
   const arr = [1, 2, 3, 4];
   const f = function(x, y) {
     const fEnv = R.mkEnv(sls.lambda);
     R.declVar(sls.xDecl, fEnv, 'x', x);
     R.declVar(sls.yDecl, fEnv, 'y', y);
-    return R.return(sls.lambdaReturn, fEnv, x + y);
+    return R.localReturn(sls.lambdaReturn, fEnv, x + y);
   };
   let ans = R.declVar(sls.ansDecl, globalEnv, 'ans', (R.send(sls.reduceCall, globalEnv, arr, 'reduce', [f, 0]), R.receive(arr.reduce(f, 0))));
   Array.prototype.reduce = oldReduce;
