@@ -3,12 +3,16 @@
 from EventRecorder import EventRecorder
 
 R = EventRecorder()
-globalEnv = R.program('program')
+_currentEnv = R.program('program')
+_currentLexicalEnv = globalEnv
 
-sum = R.declVar('sumDecl', globalEnv, 'sum', 0)
-R.declVar('xDecl', globalEnv, 'x')
+sum = R.assignVar('sumDecl', globalEnv, _currentLexicalEnv, 'sum', 0)
+R.assignVar('xDecl', globalEnv, 'x')
+_oldEnv123 = _currentEnv
+_currentEnv = ...
 for x in range(3):
-  R.assignVar('xAssignment', globalEnv, globalEnv, 'x', x)
-  sum = R.assignVar('sumAssignment', globalEnv, globalEnv, 'sum', sum + x)
+  R.assignVar('xAssignment', globalEnv, _currentLexicalEnv, 'x', x)
+  sum = R.assignVar('sumAssignment', globalEnv, _currentLexicalEnv, 'sum', sum + x)
+_currentEnv = _oldEnv123
 
-ans = R.declVar('ansDecl', globalEnv, 'ans', sum)
+ans = R.assignVar('ansDecl', globalEnv, _currentLexicalEnv, 'ans', sum)

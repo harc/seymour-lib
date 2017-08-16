@@ -1,74 +1,112 @@
-'use strict';
+"use strict";
 
-class EventRecorder {
+class EventRecorder extends CheckedEmitter {
   constructor(newEventHandler) {
-    this.eventStack = [];  // ProgramEvent SendEvent*
+    super();
+    this.registerEvent('addChild', 'child', 'parent');
+    this.registerEvent('activateSend', 'send');
+    this.registerEvent('addRoot', 'root');
+    this.currentProgramOrSendEvent = null;
     this.lastEvent = null;
-  }
-
-  get topOfEventStack() {
-    return this.eventStack[this.eventStack.length - 1];
   }
 
   program(sourceLoc) {
     const event = new ProgramEvent(sourceLoc);
-    this.eventStack.push(event);
+    this.currentProgramOrSendEvent = event;
     this.lastEvent = event;
-    return this.mkEnv(sourceLoc);
+
+    this.emit('addRoot', event);
+    const env = this.mkEnv(sourceLoc, null);
+    return env;
   }
 
-  send(sourceLoc, env, recv, selector, args) {
-    debugger;
-    const event = new SendEvent(sourceLoc, env, recv, selector, args);
-    this.eventStack.push(event);
+  send(sourceLoc, env, recv, selector, args, activationPathToken) {
+    const event = new SendEvent(sourceLoc, env, recv, selector, args, activationPathToken);
+    env.currentSendEvent = event;
+    this.currentProgramOrSendEvent = event;
     this.lastEvent = event;
+    
+    const parentEvent = env.programOrSendEvent;
+    parentEvent.children.push(event);
+    this.emit('addChild', event, parentEvent);
     // this event is only sent to event handler after it gets an activation environment (see below)
   }
 
-  mkEnv(newEnvSourceLoc) {
-    const programOrSendEvent = this.eventStack[this.eventStack.length - 1];
+  mkEnv(newEnvSourceLoc, parentEnv, scope = false) {
+    const envClass = scope ? Scope : Env;
+    const programOrSendEvent = this.currentProgramOrSendEvent;
     const callerEnv = programOrSendEvent.env;
-    const newEnv = new Env(newEnvSourceLoc, callerEnv, programOrSendEvent);
-    if ((programOrSendEvent instanceof SendEvent || programOrSendEvent instanceof ProgramEvent) &&
-        !programOrSendEvent.activationEnv) {
-      programOrSendEvent.activationEnv = newEnv;
-      const parentEvent = this.eventStack[this.eventStack.length - 2];
-      if (parentEvent) {
-        parentEvent.children.push(programOrSendEvent);
-        programOrSendEvent.env.receive(programOrSendEvent);
-      }
-    }
+    const newEnv = new envClass(newEnvSourceLoc, parentEnv, callerEnv, programOrSendEvent);
+    this._registerSend(newEnv);
     return newEnv;
   }
 
-  receive(returnValue) {
-    this.topOfEventStack.returnValue = returnValue;
-    this.eventStack.pop();
+  _registerSend(newEnv) {
+    const programOrSendEvent = newEnv.programOrSendEvent;
+    if ((programOrSendEvent instanceof SendEvent || programOrSendEvent instanceof ProgramEvent) &&
+      !programOrSendEvent.activationEnv) {
+      programOrSendEvent.activationEnv = newEnv;
+      this.emit('activateSend', programOrSendEvent);
+      if (programOrSendEvent.env) {
+        const parentEvent = programOrSendEvent.env.programOrSendEvent;
+        programOrSendEvent.env.receive(programOrSendEvent);
+      }
+    }
+  }
+
+  receive(env, returnValue) {
+    if (env.currentSendEvent != null) {
+      env.currentSendEvent.returnValue = returnValue;
+    }
+    this.currentProgramOrSendEvent = env.programOrSendEvent;
     return returnValue;
   }
 
+
   enterScope(sourceLoc, env) {
     this.send(sourceLoc, env, null, 'enterNewScope', []);
-    return this.mkEnv(sourceLoc);
+    return this.mkEnv(sourceLoc, env, true);
   }
 
-  leaveScope() {
-    this.receive(null);
+  leaveScope(env) {
+    this.receive(env, null);
   }
+
 
   _emit(event) {
-    this.topOfEventStack.children.push(event);
+    this.currentProgramOrSendEvent.children.push(event);
     event.env.receive(event);
+    this.emit('addChild', event, this.currentProgramOrSendEvent);
   }
 
-  return(sourceLoc, env, value) {
-    const event = new ReturnEvent(sourceLoc, env, value);
+  show(sourceLoc, env, string, alt) {
+    if (typeof string !== 'string') {
+      string = alt;
+    }
+    const event = new ShowEvent(sourceLoc, env, string);
+    this._emit(event);
+  }
+
+  error(sourceLoc, env, errorString) {
+    const event = new ErrorEvent(sourceLoc, env, errorString);
+    this._emit(event);
+  } 
+
+  localReturn(sourceLoc, env, value) {
+    const event = new LocalReturnEvent(sourceLoc, env, value);
     this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
-  declVar(sourceLoc, env, /*declEnv, */name, value) { // TODO: allow for declEnv
+  nonLocalReturn(sourceLoc, env, value) {
+    const event = new NonLocalReturnEvent(sourceLoc, env, value);
+    this.lastEvent = event;
+    this._emit(event);
+    return value;
+  }
+
+  declVar(sourceLoc, env, declEnv, name, value) {
     const event = new VarDeclEvent(sourceLoc, env, name, value);
     this.lastEvent = event;
     this._emit(event);
@@ -84,14 +122,12 @@ class EventRecorder {
 
   assignInstVar(sourceLoc, env, obj, name, value) {
     const event = new InstVarAssignmentEvent(sourceLoc, env, obj, name, value);
-    this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
   instantiate(sourceLoc, env, _class, args, newInstance) {
     const event = new InstantiationEvent(sourceLoc, env, _class, args, newInstance);
-    this.lastEvent = event;
     this._emit(event);
     return newInstance;
   }

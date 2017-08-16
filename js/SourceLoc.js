@@ -1,12 +1,11 @@
-'use strict';
+"use strict";
 
 class SourceLoc {
-  constructor(startPos, endPos, startLineNumber, endLineNumber, name) {
+  constructor(startPos, endPos, startLineNumber, endLineNumber) {
     this.startPos = startPos;
     this.endPos = endPos;
     this.startLineNumber = startLineNumber;
     this.endLineNumber = endLineNumber;
-    this.name = name;
   }
 
   equals(sourceLoc) {
@@ -19,5 +18,9 @@ class SourceLoc {
 
   strictlyContains(sourceLoc) {
     return this.contains(sourceLoc) && !this.equals(sourceLoc);
+  }
+
+  containsIdx(pos) {
+    return this.startPos <= pos && pos < this.endPos;
   }
 }

@@ -1,10 +1,8 @@
-'use strict';
-
-let nextEventId = 0;
+"use strict";
 
 class Event {
   constructor(sourceLoc, env) {
-    this.id = nextEventId++;
+    this.id = Event.nextEventId++;
     this.sourceLoc = sourceLoc;
     this.env = env;
     this.children = [];
@@ -19,6 +17,12 @@ class Event {
       return '{function}';
     } else if (v === undefined) {
       return 'undefined';
+    } else if (v === Infinity) {
+      return '∞';
+    } else if (v === -Infinity) {
+      return '-∞';
+    } else if (v !== null && v.hasOwnProperty('id')) {
+      return v.id < Event.objectIdEmojis.length ? Event.objectIdEmojis[v.id] : '#' + v.id;
     } else {
       return JSON.stringify(v);
     }
@@ -29,6 +33,20 @@ class Event {
   }
 }
 
+Event.nextEventId = 0;
+
+Event.objectIdEmojis = [
+  '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧',
+  '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🕷',
+  '🐢', '🐍', '🦎', '🦂', '🦀', '🦑', '🐙', '🦐', '🐠', '🐟', '🐡', '🐬', '🦈', '🐳', '🐋', '🐊', '🐆',
+  '🐅', '🐃', '🐂', '🐄', '🦌', '🐪', '🐫', '🐘', '🦏', '🦍', '🐎', '🐖', '🐐', '🐏', '🐑', '🐕', '🐩',
+  '🐈', '🐓', '🦃', '🕊', '🐇', '🐁', '🐀', '🐿', '🐉', '🐲', '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉',
+  '🍇', '🍓', '🍈', '🍒', '🍑', '🍍', '🥝', '🥑', '🍅', '🍆', '🥒', '🥕', '🌽', '🌶', '🥔', '🍠', '🌰',
+  '🥜', '🍯', '🥐', '🍞', '🥖', '🧀', '🥚', '🍳', '🥓', '🥞', '🍤', '🍗', '🍖', '🍕', '🌭', '🍔', '🍟',
+  '🥙', '🌮', '🌯', '🍝', '🍜', '🍲', '🍣', '🍱', '🍦', '🍧', '🍨', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫',
+  '🍿', '🍩', '🍪', '🥛', '🍼', '☕️', '🍵', '🍶', '🍺', '🍷', '🥃', '🍸', '🍹', '⚽️', '🏀', '🏈', '⚾️',
+  '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '⛸', '🏄', '🎸', '🎷', '🏠', '🏰', '😀', '😱', '👦🏻', '👨🏾'];
+
 class ProgramEvent extends Event {
   constructor(sourceLoc) {
     super(sourceLoc, null);
@@ -37,12 +55,24 @@ class ProgramEvent extends Event {
 }
 
 class SendEvent extends Event {
-  constructor(sourceLoc, env, recv, selector, args) {
+  constructor(sourceLoc, env, recv, selector, args, activationPathToken) {
     super(sourceLoc, env);
     this.recv = recv;
     this.selector = selector;
     this.args = args;
+    this.activationPathToken = activationPathToken;
     // also: activationEnv, returnValue
+  }
+
+  toDetailString() {
+    let s =
+        'receiver: ' + this._valueString(this.recv) + '\n' +
+        'selector: ' + this.selector + '\n' +
+        'arguments: [' + this.args.map(x => this._valueString(x)).join(', ') + ']\n';
+    if (this.hasOwnProperty('returnValue')) {
+      s += '⇒ ' + this._valueString(this.returnValue);
+    }
+    return s;
   }
 }
 
@@ -115,13 +145,36 @@ class ReturnEvent extends Event {
   }
 
   toMicroVizString() {
+    throw new Error('abstract method');
+  }
+}
+
+class LocalReturnEvent extends ReturnEvent {
+  toMicroVizString() {
+    return '→ ' + this._valueString(this.value);
+  }
+}
+
+class NonLocalReturnEvent extends ReturnEvent {
+  toMicroVizString() {
     return 'return ' + this._valueString(this.value);
   }
 }
 
-class ReceiveEvent extends Event {
-  constructor(sourceLoc, env, returnValue) {
-    super(sourceLoc, env)
-    this.returnValue = returnValue
+class ShowEvent extends Event {
+  constructor(sourceLoc, env, string) {
+    super(sourceLoc, env);
+    this.string = string;
   }
+
+  toMicroVizString() { return this.string; }
+}
+
+class ErrorEvent extends Event {
+  constructor(sourceLoc, env, errorString) {
+    super(sourceLoc, env);
+    this.errorString = errorString;
+  }
+
+  toMicroVizString() { return '▨'; }
 }

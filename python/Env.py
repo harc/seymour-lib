@@ -17,21 +17,25 @@ class Env(object):
     except AttributeError:
       self.declEnvs = {}
   
-  def declVar(self, name):
+  def declare(self, name):
     if name in self.declEnvs:
-      raise Exception(name + 'is already declared')
+      raise Exception(name + ' is already declared')
     self.declEnvs[name] = self
     return self
   
-  def declEnv(self, name):
-    return self.declEnvs.get(name)
+  def getDeclEnvFor(self, name):
+    return self.declEnvs[name]
   
-  def toJSON(self):
-    return json.dumps({
-      'type': 'Env',
+  def toJSONObject(self):
+    return {
+      'type': type(self).__name__,
       'id': self.id,
       'parentEnvId': self.parentEnv.id if self.parentEnv != None else None,
       'callerEnvId': self.callerEnv.id if self.callerEnv != None else None,
       'sourceLoc': self.sourceLoc,
       'programOrSendEventId': self.programOrSendEvent.id
-    })
+    }
+
+class Scope(Env):
+  def __init__(self, sourceLoc, parentEnv, callerEnv, programOrSendEvent):
+    super(Scope, self).__init__(sourceLoc, parentEnv, callerEnv, programOrSendEvent)

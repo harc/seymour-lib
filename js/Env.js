@@ -1,21 +1,28 @@
-'use strict';
-
-let nextEnvId = 0;
+"use strict";
 
 class Env {
-  constructor(sourceLoc, callerEnv, programOrSendEvent) {
-    this.id = nextEnvId++;
+  constructor(sourceLoc, parentEnv, callerEnv, programOrSendEvent) {
+    this.id = Env.nextEnvId++;
     this.sourceLoc = sourceLoc;
+    this.parentEnv = parentEnv;
     this.callerEnv = callerEnv;
     this.programOrSendEvent = programOrSendEvent;
-    this.microVizEvents = new MicroVizEvents(programOrSendEvent, sourceLoc);
+    this.currentSendEvent = null;
+    this.microVizEvents = new MicroVizEvents(programOrSendEvent, true, sourceLoc);
     this.programOrSendEventToMicroVizEvents = new Map([[programOrSendEvent, this.microVizEvents]]);
   }
 
   receive(event) {
-    this.maybeAdd(event);
-    if (this.callerEnv && this.shouldBubbleUp(event)) {
-      this.callerEnv.receive(event);
+    let env = this;
+    let visitedDeclEnv = false;
+    while (env) {
+      env.maybeAdd(event);
+      if (event instanceof VarAssignmentEvent &&
+          env === event.declEnv) {
+        visitedDeclEnv = true;
+        event.visitedDeclEnv = true;
+      }
+      env = env.callerEnv;
     }
   }
 
@@ -25,11 +32,11 @@ class Env {
       return;
     }
     const microVizEvents = this.programOrSendEventToMicroVizEvents.get(programOrSendEvent);
-    if (event instanceof SendEvent) {
-      const newMicroVizEvents = new MicroVizEvents(event, event.sourceLoc);
+    if (event instanceof SendEvent && event.sourceLoc !== null) {
+      const newMicroVizEvents = new MicroVizEvents(event, false, event.sourceLoc);
       this.programOrSendEventToMicroVizEvents.set(event, newMicroVizEvents);
       microVizEvents.add(newMicroVizEvents);
-    } else {
+    } else if (!(event instanceof SendEvent)) {
       microVizEvents.add(event);
     }
   }
@@ -43,8 +50,14 @@ class Env {
     while (env !== this) {
       const sendEvent = env.programOrSendEvent;
       if (this.programOrSendEventToMicroVizEvents.has(sendEvent)) {
-        if (this.shouldOnlyShowWhenLocal(event)) {
-          return sendEvent.sourceLoc.strictlyContains(event.sourceLoc) ? sendEvent : null;
+        if (this.shouldOnlyShowWhenLocal(event) && event.sourceLoc !== null) {
+          if (event.env instanceof Scope && sendEvent.sourceLoc.contains(event.env.sourceLoc)) {
+            return sendEvent;
+          } else if (sendEvent.sourceLoc.strictlyContains(event.env.sourceLoc)) {
+            return sendEvent;
+          } else {
+            return null;
+          }
         } else {
           return sendEvent;
         }
@@ -58,7 +71,9 @@ class Env {
   shouldOnlyShowWhenLocal(event) {
     return event instanceof SendEvent ||
         event instanceof ReturnEvent ||
-        event instanceof VarDeclEvent;
+        event instanceof VarDeclEvent ||
+        event instanceof ShowEvent ||
+        event instanceof VarAssignmentEvent && event.visitedDeclEnv;
   }
 
   shouldBubbleUp(event) {
@@ -67,5 +82,13 @@ class Env {
     } else {
       return true;
     }
+  }
+}
+
+Env.nextEnvId = 0;
+
+class Scope extends Env {
+  constructor(sourceLoc, parentEnv, callerEnv, programOrSendEvent) {
+    super(sourceLoc, parentEnv, callerEnv, programOrSendEvent);
   }
 }

@@ -8,8 +8,6 @@ from EventRecorder import EventRecorder
 
 async def handler(websocket, path):
   while True:
-    global ws
-    ws = websocket
     message = await websocket.recv()
     message = json.loads(message)
     print(message)
@@ -17,10 +15,13 @@ async def handler(websocket, path):
 
 
 async def runProgram(websocket, message):
-  global sls
-  sls = message['sourceLocs']
-  exec(message['code'], globals(), locals())
-  await runCode()
+  scope = {
+    'sls': message['sourceLocs'], 
+    'ws': websocket,
+    'EventRecorder': EventRecorder
+  }
+  exec(message['code'], scope)
+  await scope['runCode']()
 
 start_server = websockets.serve(handler, 'localhost', 8001)
 

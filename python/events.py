@@ -1,24 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import math
 import json
 
-class NetworkEncoder(json.JSONEncoder):
-  def default(self, o):
-    if callable(o):
-      return '{callable}'
-    elif o == None:
-      return 'None'
-    elif o == math.inf:
-      return '∞'
-    elif o == -math.inf:
-      return '-∞'
-    else:
-      try:
-        return json.JSONEncoder.default(self, o)
-      except TypeError:
-        return '#' + str(id(o)) # may wanna add object id emojis
+from utils import toJSON
 
 class Event(object):
   nextEventId = 0
@@ -31,15 +16,20 @@ class Event(object):
     self.children = []
   
   def toMicroVizString(self):
-    raise Exception('abstract method!')
+    raise NotImplementedError('abstract method!')
   
-  def toJSON(self):
+  def toJSONObject(self):
+    try:
+      microVizString = self.toMicroVizString()
+    except NotImplementedError:
+      microVizString = ''
+    
     return {
       'type': type(self).__name__,
       'sourceLoc': self.sourceLoc,
       'id': self.id,
       'envId': self.env.id if self.env != None else None,
-      'microVizString': self.toMicroVizString()
+      'microVizString': microVizString
     }
 
 class ProgramEvent(Event):
@@ -49,23 +39,22 @@ class ProgramEvent(Event):
   def toMicroVizString(self):
     return 'PROGRAM'
 
-  def toJSON(self):
-    return NetworkEncoder().encode(super(ProgramEvent, self).toJSON())
-
 class VarDeclEvent(Event):
-  def __init__(self, sourceLoc, env, name, value):
+  def __init__(self, sourceLoc, env, declEnv, name, value):
     super(VarDeclEvent, self).__init__(sourceLoc, env)
     self.name = name
     self.value = value
+    self.declEnv = declEnv
   
   def toMicroVizString(self):
-    return self.name + ' = ' + NetworkEncoder().encode(self.value)
+    return self.name + ' = ' + toJSON(self.value)
 
-  def toJSON(self):
-    dict = super(VarDeclEvent, self).toJSON()
+  def toJSONObject(self):
+    dict = super(VarDeclEvent, self).toJSONObject()
     dict['name'] = self.name
     dict['value'] = self.value
-    return NetworkEncoder().encode(dict)
+    dict['declEnvId'] = self.declEnv.id
+    return dict
 
 class VarAssignmentEvent(Event):
   def __init__(self, sourceLoc, env, declEnv, name, value):
@@ -75,14 +64,14 @@ class VarAssignmentEvent(Event):
     self.value = value
   
   def toMicroVizString(self):
-    return self.name + ' = ' + NetworkEncoder().encode(self.value)
+    return self.name + ' = ' + toJSON(self.value)
 
-  def toJSON(self):
-    dict = super(VarAssignmentEvent, self).toJSON()
+  def toJSONObject(self):
+    dict = super(VarAssignmentEvent, self).toJSONObject()
     dict['name'] = self.name
-    dict['declEnvId'] = self.declEnv.id
     dict['value'] = self.value
-    return NetworkEncoder().encode(dict)
+    dict['declEnvId'] = self.declEnv.id
+    return dict
 
 class SendEvent(Event):
   def __init__(self, sourceLoc, env, recv, selector, args, activationPathToken):
@@ -91,25 +80,24 @@ class SendEvent(Event):
     self.selector = selector
     self.args = args
     self.activationPathToken = activationPathToken
+    self.activationEnv = None # assigned when mkEnv is called
+    self.returnValue = None # assigned when receive is called
 
-  def toJSON(self):
-    dict = super(SendEvent, self).toJSON()
+  def toJSONObject(self):
+    dict = super(SendEvent, self).toJSONObject()
     dict['recv'] = self.recv
     dict['selector'] = self.selector
     dict['args'] = self.args
     dict['activationPathToken'] = self.activationPathToken
-    return NetworkEncoder().encode(dict)
-
-  def toMicroVizString(self):
-    return ''
+    return dict
 
 class ReturnEvent(Event):
   def __init__(self, sourceLoc, env, value):
     super(ReturnEvent, self).__init__(sourceLoc, env)
     self.value = value
   
-  def toJSON(self):
-    dict = super(ReturnEvent, self).toJSON()
+  def toJSONObject(self):
+    dict = super(ReturnEvent, self).toJSONObject()
     dict['value'] = self.value
     return dict
 
@@ -117,21 +105,20 @@ class LocalReturnEvent(ReturnEvent):
   def __init__(self, sourceLoc, env, value):
     super(LocalReturnEvent, self).__init__(sourceLoc, env, value)
   
-  def toJSON(self):
-    return NetworkEncoder().encode(super(LocalReturnEvent, self).toJSON())
+  def toJSONObject(self):
+    return super(LocalReturnEvent, self).toJSONObject()
 
   def toMicroVizString(self):
-    return '→ ' + NetworkEncoder().encode(self.value)
+    return '→ ' + toJSON(self.value)
+
+##----- Intended as RPC calls -------
 
 class ReceiveEvent(Event):
   def __init__(self, env, returnValue):
     super(ReceiveEvent, self).__init__(None, env)
     self.returnValue = returnValue
   
-  def toJSON(self):
-    dict = super(ReceiveEvent, self).toJSON()
+  def toJSONObject(self):
+    dict = super(ReceiveEvent, self).toJSONObject()
     dict['returnValue'] = self.returnValue
-    return NetworkEncoder().encode(dict)
-
-  def toMicroVizString(self):
-    return ''
+    return dict

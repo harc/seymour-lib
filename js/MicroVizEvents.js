@@ -1,8 +1,12 @@
-'use strict';
+"use strict";
 
-class MicroVizEvents {
-  constructor(programOrSendEvent, sourceLoc) {
+class MicroVizEvents extends CheckedEmitter {
+  constructor(programOrSendEvent, isImplementation, sourceLoc) {
+    super();
+    this.registerEvent('addEventGroup', 'eventGroup');
+
     this.programOrSendEvent = programOrSendEvent;
+    this.isImplementation = isImplementation;
     this.sourceLoc = sourceLoc;
     this.eventGroups = [];
   }
@@ -12,26 +16,45 @@ class MicroVizEvents {
   }
 
   add(event) {
-    const eventIsLocal = this.sourceLoc.strictlyContains(event.sourceLoc);
+    if (!this.sourceLoc) {
+      return;
+    }
+
+    // TODO: make sure that `contains` is the right thing -- it used to be strictlyContains,
+    // but that was causing problems for programs that were a single variable declaration, e.g.,
+    // `var x = 2;`
+    const eventIsLocal = event.sourceLoc && this.sourceLoc.contains(event.sourceLoc);
     if (eventIsLocal && this.lastEventGroup instanceof LocalEventGroup) {
       const lastEvent = this.lastEventGroup.lastEvent;
       if (event.sourceLoc.startPos >= lastEvent.sourceLoc.endPos ||  // Toby's rule
-          event.sourceLoc.strictlyContains(lastEvent.sourceLoc)) {   // Inside-out rule
+          event.sourceLoc.strictlyContains(lastEvent.sourceLoc) ||  // Inside-out rule
+          event.sourceLoc.equals(lastEvent.sourceLoc) &&
+              event.constructor !== lastEvent.constructor &&
+              (event instanceof ReturnEvent || event instanceof ShowEvent)) {
         // no-op
       } else {
-        this.eventGroups.push(new LocalEventGroup());
+        const eventGroup = new LocalEventGroup();
+        this.emit('addEventGroup', eventGroup);
+        this.eventGroups.push(eventGroup);
       }
     } else if (eventIsLocal && !(this.lastEventGroup instanceof LocalEventGroup)) {
-      this.eventGroups.push(new LocalEventGroup());
+      const eventGroup = new LocalEventGroup();
+      this.emit('addEventGroup', eventGroup);
+      this.eventGroups.push(eventGroup);
     } else if (!eventIsLocal && !(this.lastEventGroup instanceof RemoteEventGroup)) {
-      this.eventGroups.push(new RemoteEventGroup());
+      const eventGroup = new RemoteEventGroup();
+      this.emit('addEventGroup', eventGroup);
+      this.eventGroups.push(eventGroup);
     }
     this.lastEventGroup.add(event);
   }
 }
 
-class AbstractEventGroup {
+class AbstractEventGroup extends CheckedEmitter {
   constructor(events) {
+    super();
+    this.registerEvent('addEvent', 'event');
+
     this.events = events;
   }
 
@@ -50,6 +73,7 @@ class LocalEventGroup extends AbstractEventGroup {
   }
 
   add(event) {
+    this.emit('addEvent', event);
     this.events.push(event);
   }
 }
@@ -57,15 +81,19 @@ class LocalEventGroup extends AbstractEventGroup {
 class RemoteEventGroup extends AbstractEventGroup {
   constructor(...events) {
     super(events);
+    this.registerEvent('removeEvent', 'event');
   }
 
   add(event) {
     for (let idx = 0; idx < this.events.length; idx++) {
       if (event.subsumes(this.events[idx])) {
-        this.events[idx] = event;
-        return;
+        this.emit('removeEvent', this.events[idx]);
+        this.events.splice(idx, 1);
+        break;
       }
     }
+
+    this.emit('addEvent', event);
     this.events.push(event);
   }
 }
