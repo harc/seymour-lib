@@ -40,8 +40,11 @@ class ClientCommunicator(object):
         self.codeRunner = CodeRunner(message['code'], message['sourceLocs'], self.queue)
         self.codeRunner.start()
       elif message['type'] == 'kill':
-        self.codeRunner.terminate()
-        self.codeRunner = None
+        try:
+          self.codeRunner.terminate()
+          self.codeRunner = None
+        except AttributeError:
+          pass
       else:
         raise ValueError('unknown message type {}'.format(message['type']))
 
@@ -49,6 +52,9 @@ class ClientCommunicator(object):
     while True:
       item = await queue.coro_get()
       await self.websocket.send(toJSON(item))
+      if item['type'] == 'done':
+        await self.codeRunner.join()
+        self.codeRunner = None
 
 class CodeRunner(object):
   def __init__(self, code, sourceLocs, queue):
@@ -70,6 +76,9 @@ class CodeRunner(object):
   
   def terminate(self):
     self.process.terminate()
+  
+  async def join(self):
+    return await self.process.coro_join()
 
 if __name__ == '__main__':
   server = ClientCommunicator()

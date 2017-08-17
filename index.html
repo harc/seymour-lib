@@ -153,6 +153,7 @@ function onMessage(R) {
 
 function onOpen(socket, sls, instrumentedCode) {
   return () => {
+    socket.send(JSON.stringify({ type: 'kill' }))
     socket.send(JSON.stringify({
       type: 'run',
       sourceLocs: sls, 
@@ -180,7 +181,7 @@ addExample('python-fib', () => {
 
   const instrumentedCode = `
 def runCode():
-  R = EventRecorder(queue)
+  R = EventRecorder(theQueue)
   
   globalEnv = R.program(sls['program'])
   
@@ -228,7 +229,7 @@ addExample('python-for', () => {
 
   const instrumentedCode = `
 def runCode():
-  R = EventRecorder(queue)
+  R = EventRecorder(theQueue)
   globalEnv = R.program(sls['program'])
 
   sum = R.assignVar(sls['sumDecl'], globalEnv, globalEnv, 'sum', 0)
