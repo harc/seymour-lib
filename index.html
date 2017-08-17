@@ -34,6 +34,11 @@
  * TODO:
  * click to focus
  * python reduce
+ *   lambdas are hard to implement b/c they can only work with a single expression
+ *     can turn a lambda into a def with some special name
+ *   not clear how to propagate events fo uninstrumented fns
+ *     need a way to do the essential parts of mkenv and send without either side
+ * don't count enternewscope as a send in the macroviz
 */
 
 window.macroViz = new MacroViz(macroVizDivContainer);
@@ -174,40 +179,38 @@ addExample('python-fib', () => {
   ]});
 
   const instrumentedCode = `
-global runCode
-async def runCode():
-  global ws
-  R = EventRecorder(ws)
+def runCode():
+  R = EventRecorder(queue)
   
-  globalEnv = await R.program(sls['program'])
+  globalEnv = R.program(sls['program'])
   
-  async def fib(n):
-    fEnv = await R.mkEnv(sls['fibDef'], globalEnv)
-    await R.assignVar(sls['nDecl'], fEnv, fEnv, 'n', n)
+  def fib(n):
+    fEnv = R.mkEnv(sls['fibDef'], globalEnv)
+    R.assignVar(sls['nDecl'], fEnv, fEnv, 'n', n)
     if n < 2: 
-      return await R.localReturn(sls['baseReturn'], fEnv, n)
+      return R.localReturn(sls['baseReturn'], fEnv, n)
     else:
-      fa = await R.assignVar(sls['faDecl'], fEnv, fEnv, 'fa', 
-        (await R.send(sls['faCall'] , fEnv, None, 'fib', [n-1], None), await R.receive(fEnv, await fib(n-1)))[1])
-      fb = await R.assignVar(sls['fbDecl'], fEnv, fEnv, 'fb', 
-        (await R.send(sls['fbCall'], fEnv, None, 'fib', [n-2], None), await R.receive(fEnv, await fib(n-2)))[1])
-      return await R.localReturn(sls['recReturn'], fEnv, fa + fb)
+      fa = R.assignVar(sls['faDecl'], fEnv, fEnv, 'fa', 
+        (R.send(sls['faCall'] , fEnv, None, 'fib', [n-1], None), R.receive(fEnv, fib(n-1)))[1])
+      fb = R.assignVar(sls['fbDecl'], fEnv, fEnv, 'fb', 
+        (R.send(sls['fbCall'], fEnv, None, 'fib', [n-2], None), R.receive(fEnv, fib(n-2)))[1])
+      return R.localReturn(sls['recReturn'], fEnv, fa + fb)
 
-  loopEnv = await R.enterScope(sls['theLoop'], globalEnv)
+  loopEnv = R.enterScope(sls['theLoop'], globalEnv)
   for x in range(5):
-    await R.assignVar(sls['xDecl'], loopEnv, globalEnv, 'x', x)
-    fx = await R.assignVar(sls['fxDecl'], loopEnv, globalEnv, 'fx', 
-      (await R.send(sls['fibCall'], loopEnv, None, 'fib', [x], None), await R.receive(loopEnv, await fib(x)))[1])
-  await R.leaveScope(loopEnv)
+    R.assignVar(sls['xDecl'], loopEnv, globalEnv, 'x', x)
+    fx = R.assignVar(sls['fxDecl'], loopEnv, globalEnv, 'fx', 
+      (R.send(sls['fibCall'], loopEnv, None, 'fib', [x], None), R.receive(loopEnv, fib(x)))[1])
+  R.leaveScope(loopEnv)
   
-  await R.done()
+  R.done()
 `;
 
   const R = new EventRecorder();
   macroViz.setEventRecorder(R);
   cm.setValue(lines.join('\n'));
 
-  const socket = new WebSocket('ws://localhost:8001');
+  const socket = new WebSocket('ws://localhost:8000');
   socket.addEventListener('message', onMessage(R));
   socket.addEventListener('open', onOpen(socket, sls, instrumentedCode));
 });
@@ -224,33 +227,76 @@ addExample('python-for', () => {
   ]});
 
   const instrumentedCode = `
-global runCode
-async def runCode():
-  global ws
-  R = EventRecorder(ws)
-  globalEnv = await R.program(sls['program'])
+def runCode():
+  R = EventRecorder(queue)
+  globalEnv = R.program(sls['program'])
 
-  sum = await R.assignVar(sls['sumDecl'], globalEnv, globalEnv, 'sum', 0)
+  sum = R.assignVar(sls['sumDecl'], globalEnv, globalEnv, 'sum', 0)
 
   theRange = (
-    await R.send(sls['range'], globalEnv, None, 'range', [5], None), 
+    R.send(sls['range'], globalEnv, None, 'range', [5], None), 
     R.mkEnv(None, None),
-    await R.receive(globalEnv, range(5))
+    R.receive(globalEnv, range(5))
   )[2]
-  loopEnv = await R.enterScope(sls['theLoop'], globalEnv)
+  loopEnv = R.enterScope(sls['theLoop'], globalEnv)
   for x in theRange:
-    await R.assignVar(sls['xDecl'], loopEnv, globalEnv, 'x', x)
-    sum = await R.assignVar(sls['sumAssignment'], loopEnv, globalEnv, 'sum', sum + x)
-  await R.leaveScope(loopEnv)
+    R.assignVar(sls['xDecl'], loopEnv, globalEnv, 'x', x)
+    sum = R.assignVar(sls['sumAssignment'], loopEnv, globalEnv, 'sum', sum + x)
+  R.leaveScope(loopEnv)
 
-  await R.done()
+  R.done()
 `;
 
   const R = new EventRecorder();
   macroViz.setEventRecorder(R);
   cm.setValue(lines.join('\n'));
 
-  const socket = new WebSocket('ws://localhost:8001');
+  const socket = new WebSocket('ws://localhost:8000');
+  socket.addEventListener('message', onMessage(R));
+  socket.addEventListener('open', onOpen(socket, sls, instrumentedCode));
+});
+
+addExample('python-reduce', () => {
+  prog({name: 'program', code: [
+    {name: 'ansDecl', code: ['ans = ',
+      {name: 'reduce', code: ['reduce(\n',
+      '  ', {name: 'lambda', code: [
+        'lambda ', {name: 'xDecl', code: 'x'}, ', ' , {name: 'yDecl', code: 'y'}, ':\n',
+      '    ', {name: 'plus', code: 'x + y'}]}, ',\n',
+      '  [1, 2, 3, 4], 0)'
+      ]}
+    ]}, '\n'
+  ]});
+
+  const instrumentedCode = `
+from functools import reduce
+
+def runCode():
+  R = EventRecorder(theQueue)
+  globalEnv = R.program(sls['program'])
+
+  def _lambda1(x, y):
+    nonlocal R
+    lEnv = R.mkEnv(sls['lambda'], globalEnv)
+    R.assignVar(sls['xDecl'], lEnv, lEnv, 'x', x)
+    R.assignVar(sls['yDecl'], lEnv, lEnv, 'y', y)
+    return R.localReturn(sls['plus'], lEnv, x + y)
+
+  ans = R.assignVar(sls['ansDecl'], globalEnv, globalEnv, 'ans', 
+    (
+      R.send(sls['reduce'], globalEnv, None, 'reduce', ['_lambda1', [1, 2, 3, 4], 0], None),
+      R.receive(globalEnv, reduce(_lambda1, [1, 2, 3, 4], 0))
+    )[1]
+  )
+
+  R.done()
+`;
+
+  const R = new EventRecorder();
+  macroViz.setEventRecorder(R);
+  cm.setValue(lines.join('\n'));
+
+  const socket = new WebSocket('ws://localhost:8000');
   socket.addEventListener('message', onMessage(R));
   socket.addEventListener('open', onOpen(socket, sls, instrumentedCode));
 });

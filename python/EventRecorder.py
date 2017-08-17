@@ -10,27 +10,27 @@ from utils import toJSON
 ## but, since we need environments to make these calls, tracking envs is crucial
 
 class EventRecorder(object):
-  def __init__(self, websocket):
+  def __init__(self, queue):
     self.currentProgramOrSendEvent = None
-    self.websocket = websocket
+    self.queue = queue
   
-  async def program(self, sourceLoc):
+  def program(self, sourceLoc):
     event = ProgramEvent(sourceLoc)
     self.currentProgramOrSendEvent = event
-    await self._emit(event)
+    self._emit(event)
 
-    env = await self.mkEnv(sourceLoc, None)
+    env = self.mkEnv(sourceLoc, None)
     return env
 
   ## TODO: deal with activationPathToken
-  async def send(self, sourceLoc, env, recv, selector, args, activationPathToken):
+  def send(self, sourceLoc, env, recv, selector, args, activationPathToken):
     event = SendEvent(sourceLoc, env, recv, selector, args, activationPathToken)
-    await self._emit(event)
+    self._emit(event)
 
     env.currentSendEvent = event ## TODO: these effects must be replicated on both sides
     self.currentProgramOrSendEvent = event
 
-  async def mkEnv(self, newEnvSourceLoc, parentEnv, scope=False):
+  def mkEnv(self, newEnvSourceLoc, parentEnv, scope=False):
     if scope:
       envClass = Scope
     else:
@@ -51,58 +51,61 @@ class EventRecorder(object):
       if parentEvent != None:
         parentEvent.children.append(programOrSendEvent)
     
-    await self.websocket.send(toJSON(newEnv.toJSONObject()))
+    self.queue.put(newEnv.toJSONObject())
     return newEnv
   
-  async def receive(self, env, returnValue):
+  def receive(self, env, returnValue):
     ## TODO: this should be something other than an event, closer to an RPC, purely for effects
     event = ReceiveEvent(env, returnValue) 
-    await self._emit(event)
+    self._emit(event)
 
-    env.currentSendEvent.returnValue = returnValue
+    try:
+      env.currentSendEvent.returnValue = returnValue
+    except AttributeError:
+      pass
     self.currentProgramOrSendEvent = env.programOrSendEvent
     return returnValue
 
-  async def enterScope(self, sourceLoc, env): ## TODO: make this create a scope not an env
-    await self.send(sourceLoc, env, None, 'enterNewScope', [], None)
-    return await self.mkEnv(sourceLoc, env, True)
+  def enterScope(self, sourceLoc, env): ## TODO: make this create a scope not an env
+    self.send(sourceLoc, env, None, 'enterNewScope', [], None)
+    return self.mkEnv(sourceLoc, env, True)
 
-  async def leaveScope(self, env):
-    await self.receive(env, None)
+  def leaveScope(self, env):
+    self.receive(env, None)
   
-  async def _emit(self, event):
-    await self.websocket.send(toJSON(event.toJSONObject()))
+  def _emit(self, event):
+    self.queue.put(event.toJSONObject())
   
-  async def show(self, sourceLoc, env, string, alt):
+  def show(self, sourceLoc, env, string, alt):
     pass
   
-  async def error(self, sourceLoc, env, errorString):
+  def error(self, sourceLoc, env, errorString):
     pass
   
-  async def localReturn(self, sourceLoc, env, value):
+  def localReturn(self, sourceLoc, env, value):
     event = LocalReturnEvent(sourceLoc, env, value)
-    await self._emit(event)
+    self._emit(event)
 
     return value
   
-  async def nonLocalReturn(self, sourceLoc, env, value):
+  def nonLocalReturn(self, sourceLoc, env, value):
     pass
   
-  async def assignVar(self, sourceLoc, env, declEnv, name, value):
+  def assignVar(self, sourceLoc, env, declEnv, name, value):
     try:
       declEnv = declEnv.getDeclEnvFor(name)
       event = VarAssignmentEvent(sourceLoc, env, declEnv, name, value)
     except KeyError:
       declEnv.declare(name)
       event = VarDeclEvent(sourceLoc, env, declEnv, name, value)
-    await self._emit(event)
+    self._emit(event)
     return value
   
-  async def assignInstVar(self, sourceLoc, env, obj, name, value):
+  def assignInstVar(self, sourceLoc, env, obj, name, value):
     pass
   
-  async def instantiate(sourceLoc, env, _class, args, newInstance):
+  def instantiate(sourceLoc, env, _class, args, newInstance):
     pass
   
-  async def done(self):
-    await self.websocket.send(toJSON({'type': 'done'}))
+  def done(self):
+    self.queue.put({'type': 'done'})

@@ -1,29 +1,76 @@
 #!/usr/bin/env python3
 
+## TODO:
+# adjust python examples in index
+
 import asyncio
+import threading
+from aioprocessing import AioProcess, AioQueue
 import websockets
 import json
 
 from EventRecorder import EventRecorder
+from utils import toJSON
 
-async def handler(websocket, path):
-  while True:
-    message = await websocket.recv()
-    message = json.loads(message)
-    print(message)
-    await runProgram(websocket, message)
+class ClientCommunicator(object):
+  def __init__(self):
+    self.start_server = websockets.serve(self.onConnection, 'localhost', 8000)
+    self.loop = asyncio.get_event_loop()
+    self.queue = AioQueue()
+    self.websocket = None
+    self.codeRunner = None
+  
+  def serve(self):
+    self.loop.run_until_complete(self.start_server)
+    asyncio.ensure_future(self.processQueue(self.queue), loop=self.loop)
+    self.loop.run_forever()
 
+  async def onConnection(self, websocket, path):
+    self.websocket = websocket
+    while True:
+      try:
+        message = await self.websocket.recv()
+      except websockets.exceptions.ConnectionClosed:
+        print('CONNECTION CLOSED')
+      
+      message = json.loads(message)
+      print(message['type'])
+      if message['type'] == 'run':
+        print(message['code'])
+        self.codeRunner = CodeRunner(message['code'], message['sourceLocs'], self.queue)
+        self.codeRunner.start()
+      elif message['type'] == 'kill':
+        self.codeRunner.terminate()
+        self.codeRunner = None
+      else:
+        raise ValueError('unknown message type {}'.format(message['type']))
 
-async def runProgram(websocket, message):
-  scope = {
-    'sls': message['sourceLocs'], 
-    'ws': websocket,
-    'EventRecorder': EventRecorder
-  }
-  exec(message['code'], scope)
-  await scope['runCode']()
+  async def processQueue(self, queue):
+    while True:
+      item = await queue.coro_get()
+      await self.websocket.send(toJSON(item))
 
-start_server = websockets.serve(handler, 'localhost', 8001)
+class CodeRunner(object):
+  def __init__(self, code, sourceLocs, queue):
+    self.code = code
+    self.sourceLocs = sourceLocs
+    self.queue = queue
+    self.process = AioProcess(target=self.run)
+  
+  def run(self):
+    g = globals().copy()
+    g['sls'] = self.sourceLocs
+    g['theQueue'] = self.queue
+    g['EventRecorder'] = EventRecorder
+    exec(self.code, g)
+    g['runCode']()
+  
+  def start(self):
+    self.process.start()
+  
+  def terminate(self):
+    self.process.terminate()
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+if __name__ == '__main__':
+  server = ClientCommunicator()
+  server.serve()
