@@ -218,7 +218,7 @@ def runCode():
   globalEnv = R.program(1, sls['program'])
   
   def fib(n):
-    fEnv = R.mkEnv(sls['fibDef'], globalEnv)
+    fEnv = R.mkEnv(sls['fibDef'], 'fib', globalEnv)
     R.assignVar(1, sls['nDecl'], fEnv, fEnv, 'n', n)
     if n < 2: 
       return R.localReturn(2, sls['baseReturn'], fEnv, n)
@@ -231,9 +231,8 @@ def runCode():
 
   theRange = (
     R.send(2, sls['range'], globalEnv, None, 'range', [5], None), 
-    R.mkEnv(None, None),
     R.receive(globalEnv, range(5))
-  )[2]
+  )[1]
   loopEnv = R.enterScope(3, sls['theLoop'], globalEnv)
   for x in theRange:
     R.assignVar(4, sls['xDecl'], loopEnv, globalEnv, 'x', x)
@@ -272,9 +271,8 @@ def runCode():
 
   theRange = (
     R.send(3, sls['range'], globalEnv, None, 'range', [5], None), 
-    R.mkEnv(None, None),
     R.receive(globalEnv, range(5))
-  )[2]
+  )[1]
   loopEnv = R.enterScope(4, sls['theLoop'], globalEnv)
   for x in theRange:
     R.assignVar(5, sls['xDecl'], loopEnv, globalEnv, 'x', x)
@@ -313,7 +311,7 @@ def runCode():
   globalEnv = R.program(1, sls['program'])
 
   def _lambda1(x, y):
-    lEnv = R.mkEnv(sls['lambda'], globalEnv)
+    lEnv = R.mkEnv(sls['lambda'], 'lambda', globalEnv)
     R.assignVar(1, sls['xDecl'], lEnv, lEnv, 'x', x)
     R.assignVar(2, sls['yDecl'], lEnv, lEnv, 'y', y)
     return R.localReturn(3, sls['plus'], lEnv, x + y)
@@ -377,13 +375,13 @@ def runCode():
   globalEnv = R.program(1, sls['program'])
 
   def less(a, b):
-    fEnv = R.mkEnv(sls['lessDef'], globalEnv)
+    fEnv = R.mkEnv(sls['lessDef'], 'less', globalEnv)
     R.assignVar(1, sls['argDecl'], fEnv, fEnv, 'a', a)
     R.assignVar(2, sls['bDecl'], fEnv, fEnv, 'b', b)
     return R.localReturn(3, sls['return'], fEnv, a < b)
   
   def five():
-    fEnv = R.mkEnv(sls['fiveDef'], globalEnv)
+    fEnv = R.mkEnv(sls['fiveDef'], 'five', globalEnv)
     return R.localReturn(1, sls['return5'], fEnv, 5)
   
   a = R.assignVar(4, sls['aDecl'], globalEnv, globalEnv, 'a', (R.send(3, sls['fiveCall'], globalEnv, None, 'five', [], None), R.receive(globalEnv, five()))[1] if (R.send(2, sls['lessCall'], globalEnv, None, 'less', [5, 3], None), R.receive(globalEnv, less(3, 5)))[1] else 2)

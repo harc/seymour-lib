@@ -38,6 +38,8 @@ class ProgramEvent(Event):
   def __init__(self, orderNum, sourceLoc):
     super(ProgramEvent, self).__init__(orderNum, sourceLoc, None)
     self.activationEnv = None
+    self.selector = 'program'
+    self.activated = False
   
   def toMicroVizString(self):
     return 'PROGRAM'
@@ -85,6 +87,7 @@ class SendEvent(Event):
     self.activationPathToken = activationPathToken
     self.activationEnv = None # assigned when mkEnv is called
     self.returnValue = None # assigned when receive is called
+    self.activated = False # assigned when mkEnv is called
 
   def toJSONObject(self):
     dict = super(SendEvent, self).toJSONObject()
