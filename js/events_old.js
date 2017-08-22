@@ -1,8 +1,7 @@
 "use strict";
 
 class Event {
-  constructor(orderNum, sourceLoc, env) {
-    this.orderNum = orderNum;
+  constructor(sourceLoc, env) {
     this.id = Event.nextEventId++;
     this.sourceLoc = sourceLoc;
     this.env = env;
@@ -49,15 +48,15 @@ Event.objectIdEmojis = [
   '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '⛸', '🏄', '🎸', '🎷', '🏠', '🏰', '😀', '😱', '👦🏻', '👨🏾'];
 
 class ProgramEvent extends Event {
-  constructor(orderNum, sourceLoc) {
-    super(orderNum, sourceLoc, null);
+  constructor(sourceLoc) {
+    super(sourceLoc, null);
     // also: activationEnv
   }
 }
 
 class SendEvent extends Event {
-  constructor(orderNum, sourceLoc, env, recv, selector, args, activationPathToken) {
-    super(orderNum, sourceLoc, env);
+  constructor(sourceLoc, env, recv, selector, args, activationPathToken) {
+    super(sourceLoc, env);
     this.recv = recv;
     this.selector = selector;
     this.args = args;
@@ -78,8 +77,8 @@ class SendEvent extends Event {
 }
 
 class VarDeclEvent extends Event {
-  constructor(orderNum, sourceLoc, env, name, value) {
-    super(orderNum, sourceLoc, env);
+  constructor(sourceLoc, env, name, value) {
+    super(sourceLoc, env);
     this.name = name;
     this.value = value;
   }
@@ -90,8 +89,8 @@ class VarDeclEvent extends Event {
 }
 
 class VarAssignmentEvent extends Event {
-  constructor(orderNum, sourceLoc, env, declEnv, name, value) {
-    super(orderNum, sourceLoc, env);
+  constructor(sourceLoc, env, declEnv, name, value) {
+    super(sourceLoc, env);
     this.declEnv = declEnv;
     this.name = name;
     this.value = value;
@@ -108,8 +107,8 @@ class VarAssignmentEvent extends Event {
 }
 
 class InstVarAssignmentEvent extends Event {
-  constructor(orderNum, sourceLoc, env, obj, name, value) {
-    super(orderNum, sourceLoc, env);
+  constructor(sourceLoc, env, obj, name, value) {
+    super(sourceLoc, env);
     this.obj = obj;
     this.name = name;
     this.value = value;
@@ -127,8 +126,8 @@ class InstVarAssignmentEvent extends Event {
 
 class InstantiationEvent extends Event {
   // TODO: how should we handle the call to init?
-  constructor(orderNum, sourceLoc, env, _class, args, newInstance) {
-    super(orderNum, sourceLoc, env);
+  constructor(sourceLoc, env, _class, args, newInstance) {
+    super(sourceLoc, env);
     this.class = _class;
     this.args = args;
     this.newInstance = newInstance;
@@ -140,8 +139,8 @@ class InstantiationEvent extends Event {
 }
 
 class ReturnEvent extends Event {
-  constructor(orderNum, sourceLoc, env, value) {
-    super(orderNum, sourceLoc, env);
+  constructor(sourceLoc, env, value) {
+    super(sourceLoc, env);
     this.value = value;
   }
 
@@ -163,8 +162,8 @@ class NonLocalReturnEvent extends ReturnEvent {
 }
 
 class ShowEvent extends Event {
-  constructor(orderNum, sourceLoc, env, string) {
-    super(orderNum, sourceLoc, env);
+  constructor(sourceLoc, env, string) {
+    super(sourceLoc, env);
     this.string = string;
   }
 
@@ -173,7 +172,7 @@ class ShowEvent extends Event {
 
 class ErrorEvent extends Event {
   constructor(sourceLoc, env, errorString) {
-    super(-1, sourceLoc, env);
+    super(sourceLoc, env);
     this.errorString = errorString;
   }
 

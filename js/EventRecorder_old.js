@@ -10,8 +10,8 @@ class EventRecorder extends CheckedEmitter {
     this.lastEvent = null;
   }
 
-  program(orderNum, sourceLoc) {
-    const event = new ProgramEvent(orderNum, sourceLoc);
+  program(sourceLoc) {
+    const event = new ProgramEvent(sourceLoc);
     this.currentProgramOrSendEvent = event;
     this.lastEvent = event;
 
@@ -20,8 +20,8 @@ class EventRecorder extends CheckedEmitter {
     return env;
   }
 
-  send(orderNum, sourceLoc, env, recv, selector, args, activationPathToken) {
-    const event = new SendEvent(orderNum, sourceLoc, env, recv, selector, args, activationPathToken);
+  send(sourceLoc, env, recv, selector, args, activationPathToken) {
+    const event = new SendEvent(sourceLoc, env, recv, selector, args, activationPathToken);
     env.currentSendEvent = event;
     this.currentProgramOrSendEvent = event;
     this.lastEvent = event;
@@ -63,8 +63,8 @@ class EventRecorder extends CheckedEmitter {
   }
 
 
-  enterScope(orderNum, sourceLoc, env) {
-    this.send(orderNum, sourceLoc, env, null, 'enterNewScope', []);
+  enterScope(sourceLoc, env) {
+    this.send(sourceLoc, env, null, 'enterNewScope', []);
     return this.mkEnv(sourceLoc, env, true);
   }
 
@@ -79,11 +79,11 @@ class EventRecorder extends CheckedEmitter {
     this.emit('addChild', event, this.currentProgramOrSendEvent);
   }
 
-  show(orderNum, sourceLoc, env, string, alt) {
+  show(sourceLoc, env, string, alt) {
     if (typeof string !== 'string') {
       string = alt;
     }
-    const event = new ShowEvent(orderNum, sourceLoc, env, string);
+    const event = new ShowEvent(sourceLoc, env, string);
     this._emit(event);
   }
 
@@ -92,42 +92,42 @@ class EventRecorder extends CheckedEmitter {
     this._emit(event);
   } 
 
-  localReturn(orderNum, sourceLoc, env, value) {
-    const event = new LocalReturnEvent(orderNum, sourceLoc, env, value);
+  localReturn(sourceLoc, env, value) {
+    const event = new LocalReturnEvent(sourceLoc, env, value);
     this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
-  nonLocalReturn(orderNum, sourceLoc, env, value) {
-    const event = new NonLocalReturnEvent(orderNum, sourceLoc, env, value);
+  nonLocalReturn(sourceLoc, env, value) {
+    const event = new NonLocalReturnEvent(sourceLoc, env, value);
     this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
-  declVar(orderNum, sourceLoc, env, declEnv, name, value) {
-    const event = new VarDeclEvent(orderNum, sourceLoc, env, name, value);
+  declVar(sourceLoc, env, declEnv, name, value) {
+    const event = new VarDeclEvent(sourceLoc, env, name, value);
     this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
-  assignVar(orderNum, sourceLoc, env, declEnv, name, value) {
-    const event = new VarAssignmentEvent(orderNum, sourceLoc, env, declEnv, name, value);
+  assignVar(sourceLoc, env, declEnv, name, value) {
+    const event = new VarAssignmentEvent(sourceLoc, env, declEnv, name, value);
     this.lastEvent = event;
     this._emit(event);
     return value;
   }
 
-  assignInstVar(orderNum, sourceLoc, env, obj, name, value) {
-    const event = new InstVarAssignmentEvent(orderNum, sourceLoc, env, obj, name, value);
+  assignInstVar(sourceLoc, env, obj, name, value) {
+    const event = new InstVarAssignmentEvent(sourceLoc, env, obj, name, value);
     this._emit(event);
     return value;
   }
 
-  instantiate(orderNum, sourceLoc, env, _class, args, newInstance) {
-    const event = new InstantiationEvent(orderNum, sourceLoc, env, _class, args, newInstance);
+  instantiate(sourceLoc, env, _class, args, newInstance) {
+    const event = new InstantiationEvent(sourceLoc, env, _class, args, newInstance);
     this._emit(event);
     return newInstance;
   }

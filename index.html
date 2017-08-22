@@ -21,6 +21,7 @@
     <link rel="stylesheet" type="text/css" href="node_modules/codemirror/lib/codemirror.css"></script>
     <link rel="stylesheet" type="text/css" href="macroViz.css"></script>
     <link rel="stylesheet" type="text/css" href="microViz.css"></script>
+    <link rel="stylesheet" type="text/css" href="highlighting.css"></script>
     <div id="exampleButtons"></div>
     <div id="microVizDivContainer">
       <!-- <div id="microVizDiv"></div> -->
@@ -33,11 +34,6 @@
 /**
  * TODO:
  * click to focus
- * python reduce
- *   lambdas are hard to implement b/c they can only work with a single expression
- *     can turn a lambda into a def with some special name
- *   not clear how to propagate events fo uninstrumented fns
- *     need a way to do the essential parts of mkenv and send without either side
  * don't count enternewscope as a send in the macroviz
 */
 
@@ -47,6 +43,41 @@ window.cm = microViz.editor;
 cm.setOption('lineNumbers', true);
 cm.setOption('readOnly', true);
 cm.setOption('viewportMargin', Infinity);
+
+macroViz.addListener('click', (__, event, _) => {
+  let pathMatchers = getPathMatchers(event.activationEnv);
+  
+  macroViz.events.forEach(event => macroVizClear(event, 'focus', false));
+
+  microViz.setPaths(pathMatchers);
+  pathMatchers.forEach(path => { 
+    macroVizHighlight(path.env.programOrSendEvent, 'focus', '');
+    this.microViz.addImplementation(path.env.microVizEvents);
+  });
+})
+
+function macroVizClear(event, highlightType = null, isPrefix = false) {
+  const view = macroViz.getNodeView(event);
+  if (!view) return;
+  if (highlightType !== null && !isPrefix) {
+    view.DOM.classList.remove(`highlight-${highlightType}`);
+  } else {
+    const prefix = highlightType === null ? '' : highlightType;
+    const classList = view.DOM.classList;
+    for (let i = classList.length - 1; i >= 0; i--) {
+      const cls = classList[i];
+      if (cls.startsWith(`highlight-${prefix}`)) {
+        classList.remove(cls)
+      }
+    }
+  }
+}
+
+function macroVizHighlight(event, highlightType) {
+  const view = macroViz.getNodeView(event);
+  if (!view) return;
+  view.DOM.classList.add(`highlight-${highlightType}`);
+}
 
 
 const examples = {};
@@ -67,12 +98,13 @@ let globalEnv;
 const envs = {};
 const events = {};
 const eventArgOrders = {
-  ProgramEvent: ['sourceLoc'],
-  SendEvent: ['sourceLoc', 'envId', 'recv', 'selector', 'args'],
-  VarDeclEvent: ['sourceLoc', 'envId', 'declEnvId', 'name', 'value'],
-  VarAssignmentEvent: ['sourceLoc', 'envId', 'declEnvId', 'name', 'value'],
+  ProgramEvent: ['orderNum', 'sourceLoc'],
+  SendEvent: ['orderNum', 'sourceLoc', 'envId', 'recv', 'selector', 'args'],
+  VarDeclEvent: ['orderNum', 'sourceLoc', 'envId', 'declEnvId', 'name', 'value'],
+  VarAssignmentEvent: ['orderNum', 'sourceLoc', 'envId', 'declEnvId', 'name', 'value'],
   ReceiveEvent: ['envId', 'returnValue'],
-  LocalReturnEvent: ['sourceLoc', 'envId', 'value']
+  LocalReturnEvent: ['orderNum', 'sourceLoc', 'envId', 'value'],
+  ErrorEvent: ['sourceLoc', 'envId', 'errorString']
 };
 const eventMethods = {
   ProgramEvent: 'program',
@@ -80,7 +112,8 @@ const eventMethods = {
   VarDeclEvent: 'declVar',
   VarAssignmentEvent: 'assignVar',
   ReceiveEvent: 'receive',
-  LocalReturnEvent: 'localReturn'
+  LocalReturnEvent: 'localReturn',
+  ErrorEvent: 'error'
 };
 const typeToClass = {
   Env,
@@ -109,6 +142,7 @@ function fixupEnv(envJSON) {
   );
   if (env.programOrSendEvent instanceof ProgramEvent) {
     globalEnv = env;
+    env.programOrSendEvent.activationEnv = env;
   }
   return env;
 }
@@ -175,33 +209,36 @@ addExample('python-fib', () => {
     '\n\n',
     {name: 'theLoop', code: [
     'for ', {name: 'xDecl', code: 'x'}, ' in ', {name: 'range', code: 'range(5)'}, ': \n',
-    '  ', {name: 'fxDecl', code: ['fx = ', {name: 'fibCall', code: 'fib(x)'}]}, '\n'
-    ]}
+    '  ', {name: 'fxDecl', code: ['fx = ', {name: 'fibCall', code: 'fib(x)'}]}, 
+    ]}, '\n'
   ]});
 
   const instrumentedCode = `
 def runCode():
-  R = EventRecorder(theQueue)
-  
-  globalEnv = R.program(sls['program'])
+  globalEnv = R.program(1, sls['program'])
   
   def fib(n):
     fEnv = R.mkEnv(sls['fibDef'], globalEnv)
-    R.assignVar(sls['nDecl'], fEnv, fEnv, 'n', n)
+    R.assignVar(1, sls['nDecl'], fEnv, fEnv, 'n', n)
     if n < 2: 
-      return R.localReturn(sls['baseReturn'], fEnv, n)
+      return R.localReturn(2, sls['baseReturn'], fEnv, n)
     else:
-      fa = R.assignVar(sls['faDecl'], fEnv, fEnv, 'fa', 
-        (R.send(sls['faCall'] , fEnv, None, 'fib', [n-1], None), R.receive(fEnv, fib(n-1)))[1])
-      fb = R.assignVar(sls['fbDecl'], fEnv, fEnv, 'fb', 
-        (R.send(sls['fbCall'], fEnv, None, 'fib', [n-2], None), R.receive(fEnv, fib(n-2)))[1])
-      return R.localReturn(sls['recReturn'], fEnv, fa + fb)
+      fa = R.assignVar(4, sls['faDecl'], fEnv, fEnv, 'fa', 
+        (R.send(3, sls['faCall'] , fEnv, None, 'fib', [n-1], None), R.receive(fEnv, fib(n-1)))[1])
+      fb = R.assignVar(6, sls['fbDecl'], fEnv, fEnv, 'fb', 
+        (R.send(5, sls['fbCall'], fEnv, None, 'fib', [n-2], None), R.receive(fEnv, fib(n-2)))[1])
+      return R.localReturn(7, sls['recReturn'], fEnv, fa + fb)
 
-  loopEnv = R.enterScope(sls['theLoop'], globalEnv)
-  for x in range(5):
-    R.assignVar(sls['xDecl'], loopEnv, globalEnv, 'x', x)
-    fx = R.assignVar(sls['fxDecl'], loopEnv, globalEnv, 'fx', 
-      (R.send(sls['fibCall'], loopEnv, None, 'fib', [x], None), R.receive(loopEnv, fib(x)))[1])
+  theRange = (
+    R.send(2, sls['range'], globalEnv, None, 'range', [5], None), 
+    R.mkEnv(None, None),
+    R.receive(globalEnv, range(5))
+  )[2]
+  loopEnv = R.enterScope(3, sls['theLoop'], globalEnv)
+  for x in theRange:
+    R.assignVar(4, sls['xDecl'], loopEnv, globalEnv, 'x', x)
+    fx = R.assignVar(6, sls['fxDecl'], loopEnv, globalEnv, 'fx', 
+      (R.send(5, sls['fibCall'], loopEnv, None, 'fib', [x], None), R.receive(loopEnv, fib(x)))[1])
   R.leaveScope(loopEnv)
   
   R.done()
@@ -229,20 +266,19 @@ addExample('python-for', () => {
 
   const instrumentedCode = `
 def runCode():
-  R = EventRecorder(theQueue)
-  globalEnv = R.program(sls['program'])
+  globalEnv = R.program(1, sls['program'])
 
-  sum = R.assignVar(sls['sumDecl'], globalEnv, globalEnv, 'sum', 0)
+  sum = R.assignVar(2, sls['sumDecl'], globalEnv, globalEnv, 'sum', 0)
 
   theRange = (
-    R.send(sls['range'], globalEnv, None, 'range', [5], None), 
+    R.send(3, sls['range'], globalEnv, None, 'range', [5], None), 
     R.mkEnv(None, None),
     R.receive(globalEnv, range(5))
   )[2]
-  loopEnv = R.enterScope(sls['theLoop'], globalEnv)
+  loopEnv = R.enterScope(4, sls['theLoop'], globalEnv)
   for x in theRange:
-    R.assignVar(sls['xDecl'], loopEnv, globalEnv, 'x', x)
-    sum = R.assignVar(sls['sumAssignment'], loopEnv, globalEnv, 'sum', sum + x)
+    R.assignVar(5, sls['xDecl'], loopEnv, globalEnv, 'x', x)
+    sum = R.assignVar(6, sls['sumAssignment'], loopEnv, globalEnv, 'sum', sum + x)
   R.leaveScope(loopEnv)
 
   R.done()
@@ -259,6 +295,7 @@ def runCode():
 
 addExample('python-reduce', () => {
   prog({name: 'program', code: [
+    {name: 'import', code: 'from functools import reduce'}, '\n\n',
     {name: 'ansDecl', code: ['ans = ',
       {name: 'reduce', code: ['reduce(\n',
       '  ', {name: 'lambda', code: [
@@ -273,23 +310,83 @@ addExample('python-reduce', () => {
 from functools import reduce
 
 def runCode():
-  R = EventRecorder(theQueue)
-  globalEnv = R.program(sls['program'])
+  globalEnv = R.program(1, sls['program'])
 
   def _lambda1(x, y):
-    nonlocal R
     lEnv = R.mkEnv(sls['lambda'], globalEnv)
-    R.assignVar(sls['xDecl'], lEnv, lEnv, 'x', x)
-    R.assignVar(sls['yDecl'], lEnv, lEnv, 'y', y)
-    return R.localReturn(sls['plus'], lEnv, x + y)
+    R.assignVar(1, sls['xDecl'], lEnv, lEnv, 'x', x)
+    R.assignVar(2, sls['yDecl'], lEnv, lEnv, 'y', y)
+    return R.localReturn(3, sls['plus'], lEnv, x + y)
 
-  ans = R.assignVar(sls['ansDecl'], globalEnv, globalEnv, 'ans', 
+  ans = R.assignVar(3, sls['ansDecl'], globalEnv, globalEnv, 'ans', 
     (
-      R.send(sls['reduce'], globalEnv, None, 'reduce', ['_lambda1', [1, 2, 3, 4], 0], None),
+      R.send(2, sls['reduce'], globalEnv, None, 'reduce', ['_lambda1', [1, 2, 3, 4], 0], None),
       R.receive(globalEnv, reduce(_lambda1, [1, 2, 3, 4], 0))
     )[1]
   )
 
+  R.done()
+`;
+
+  const R = new EventRecorder();
+  macroViz.setEventRecorder(R);
+  cm.setValue(lines.join('\n'));
+
+  const socket = new WebSocket('ws://localhost:8000');
+  socket.addEventListener('message', onMessage(R));
+  socket.addEventListener('open', onOpen(socket, sls, instrumentedCode));
+});
+
+addExample('python-raise', () => {
+  prog({name: 'program', code: [
+    {name: 'raise', code: 'raise Exception("hi")'}]
+  });
+
+  const instrumentedCode = `
+def runCode():
+  globalEnv = R.program(1, sls['program'])
+  raise Exception("hi")
+  R.done()
+`;
+
+  const R = new EventRecorder();
+  macroViz.setEventRecorder(R);
+  cm.setValue(lines.join('\n'));
+
+  const socket = new WebSocket('ws://localhost:8000');
+  socket.addEventListener('message', onMessage(R));
+  socket.addEventListener('open', onOpen(socket, sls, instrumentedCode));
+});
+
+addExample('python-less', () => {
+  prog({name: 'program', code: [
+    {name: 'lessDef', 
+      code: ['def less(', {name: 'argDecl', code: 'a'},', ', {name: 'bDecl', code: 'b'}, '):\n',
+      '  ', {name: 'return', code: 'return a < b'}
+    ]}, '\n\n',
+    {name: 'fiveDef', 
+      code: ['def five():\n',
+      '  ', {name: 'return5', code: 'return 5'}
+    ]}, '\n\n',
+    {name: 'aDecl', code: ['a = ', 
+      {name: 'ifThenElse', code: [{name: 'fiveCall', code: 'five()'}, ' if ', {name: 'lessCall', code: 'less(3, 5)'}, ' else 2']  }
+  ]}]});
+
+  const instrumentedCode = `
+def runCode():
+  globalEnv = R.program(1, sls['program'])
+
+  def less(a, b):
+    fEnv = R.mkEnv(sls['lessDef'], globalEnv)
+    R.assignVar(1, sls['argDecl'], fEnv, fEnv, 'a', a)
+    R.assignVar(2, sls['bDecl'], fEnv, fEnv, 'b', b)
+    return R.localReturn(3, sls['return'], fEnv, a < b)
+  
+  def five():
+    fEnv = R.mkEnv(sls['fiveDef'], globalEnv)
+    return R.localReturn(1, sls['return5'], fEnv, 5)
+  
+  a = R.assignVar(4, sls['aDecl'], globalEnv, globalEnv, 'a', (R.send(3, sls['fiveCall'], globalEnv, None, 'five', [], None), R.receive(globalEnv, five()))[1] if (R.send(2, sls['lessCall'], globalEnv, None, 'less', [5, 3], None), R.receive(globalEnv, less(3, 5)))[1] else 2)
   R.done()
 `;
 

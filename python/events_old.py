@@ -8,10 +8,9 @@ from utils import toJSON
 class Event(object):
   nextEventId = 0
 
-  def __init__(self, orderNum, sourceLoc, env):
+  def __init__(self, sourceLoc, env):
     self.id = Event.nextEventId
     Event.nextEventId += 1
-    self.orderNum = orderNum
     self.sourceLoc = sourceLoc
     self.env = env
     self.children = []
@@ -27,7 +26,6 @@ class Event(object):
     
     return {
       'type': type(self).__name__,
-      'orderNum': self.orderNum,
       'sourceLoc': self.sourceLoc,
       'id': self.id,
       'envId': self.env.id if self.env != None else None,
@@ -35,16 +33,16 @@ class Event(object):
     }
 
 class ProgramEvent(Event):
-  def __init__(self, orderNum, sourceLoc):
-    super(ProgramEvent, self).__init__(orderNum, sourceLoc, None)
+  def __init__(self, sourceLoc):
+    super(ProgramEvent, self).__init__(sourceLoc, None)
     self.activationEnv = None
   
   def toMicroVizString(self):
     return 'PROGRAM'
 
 class VarDeclEvent(Event):
-  def __init__(self, orderNum, sourceLoc, env, declEnv, name, value):
-    super(VarDeclEvent, self).__init__(orderNum, sourceLoc, env)
+  def __init__(self, sourceLoc, env, declEnv, name, value):
+    super(VarDeclEvent, self).__init__(sourceLoc, env)
     self.name = name
     self.value = value
     self.declEnv = declEnv
@@ -60,8 +58,8 @@ class VarDeclEvent(Event):
     return dict
 
 class VarAssignmentEvent(Event):
-  def __init__(self, orderNum, sourceLoc, env, declEnv, name, value):
-    super(VarAssignmentEvent, self).__init__(orderNum, sourceLoc, env)
+  def __init__(self, sourceLoc, env, declEnv, name, value):
+    super(VarAssignmentEvent, self).__init__(sourceLoc, env)
     self.declEnv = declEnv
     self.name = name
     self.value = value
@@ -77,8 +75,8 @@ class VarAssignmentEvent(Event):
     return dict
 
 class SendEvent(Event):
-  def __init__(self, orderNum, sourceLoc, env, recv, selector, args, activationPathToken):
-    super(SendEvent, self).__init__(orderNum, sourceLoc, env)
+  def __init__(self, sourceLoc, env, recv, selector, args, activationPathToken):
+    super(SendEvent, self).__init__(sourceLoc, env)
     self.recv = recv
     self.selector = selector
     self.args = args
@@ -95,8 +93,8 @@ class SendEvent(Event):
     return dict
 
 class ReturnEvent(Event):
-  def __init__(self, orderNum, sourceLoc, env, value):
-    super(ReturnEvent, self).__init__(orderNum, sourceLoc, env)
+  def __init__(self, sourceLoc, env, value):
+    super(ReturnEvent, self).__init__(sourceLoc, env)
     self.value = value
   
   def toJSONObject(self):
@@ -105,15 +103,15 @@ class ReturnEvent(Event):
     return dict
 
 class LocalReturnEvent(ReturnEvent):
-  def __init__(self, orderNum, sourceLoc, env, value):
-    super(LocalReturnEvent, self).__init__(orderNum, sourceLoc, env, value)
+  def __init__(self, sourceLoc, env, value):
+    super(LocalReturnEvent, self).__init__(sourceLoc, env, value)
 
   def toMicroVizString(self):
     return '→ ' + toJSON(self.value)
 
 class ErrorEvent(Event):
   def __init__(self, sourceLoc, env, errorString):
-    super(ErrorEvent, self).__init__(-1, sourceLoc, env)
+    super(ErrorEvent, self).__init__(sourceLoc, env)
     self.errorString = errorString
   
   def toJSONObject(self):
@@ -128,7 +126,7 @@ class ErrorEvent(Event):
 
 class ReceiveEvent(Event):
   def __init__(self, env, returnValue):
-    super(ReceiveEvent, self).__init__(-1, None, env)
+    super(ReceiveEvent, self).__init__(None, env)
     self.returnValue = returnValue
   
   def toJSONObject(self):

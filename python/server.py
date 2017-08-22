@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 
-## TODO:
-# adjust python examples in index
-
 import asyncio
-import threading
 from aioprocessing import AioProcess, AioQueue
 import websockets
 import json
@@ -65,11 +61,19 @@ class CodeRunner(object):
   
   def run(self):
     g = globals().copy()
+    R = EventRecorder(self.queue)
     g['sls'] = self.sourceLocs
-    g['theQueue'] = self.queue
-    g['EventRecorder'] = EventRecorder
+    g['R'] = R
     exec(self.code, g)
-    g['runCode']()
+    try:
+      g['runCode']()
+    except Exception as e:
+      activationEnv = R.currentProgramOrSendEvent.activationEnv
+      R.error(
+        R.currentProgramOrSendEvent.sourceLoc if activationEnv != None else None,
+        activationEnv if activationEnv != None else R.currentProgramOrSendEvent.env,
+        str(e)
+      )
   
   def start(self):
     self.process.start()

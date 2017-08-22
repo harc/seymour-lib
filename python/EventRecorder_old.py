@@ -14,8 +14,8 @@ class EventRecorder(object):
     self.currentProgramOrSendEvent = None
     self.queue = queue
   
-  def program(self, orderNum, sourceLoc):
-    event = ProgramEvent(orderNum, sourceLoc)
+  def program(self, sourceLoc):
+    event = ProgramEvent(sourceLoc)
     self.currentProgramOrSendEvent = event
     self._emit(event)
 
@@ -23,8 +23,8 @@ class EventRecorder(object):
     return env
 
   ## TODO: deal with activationPathToken
-  def send(self, orderNum, sourceLoc, env, recv, selector, args, activationPathToken):
-    event = SendEvent(orderNum, sourceLoc, env, recv, selector, args, activationPathToken)
+  def send(self, sourceLoc, env, recv, selector, args, activationPathToken):
+    event = SendEvent(sourceLoc, env, recv, selector, args, activationPathToken)
     self._emit(event)
 
     env.currentSendEvent = event ## TODO: these effects must be replicated on both sides
@@ -66,8 +66,8 @@ class EventRecorder(object):
     self.currentProgramOrSendEvent = env.programOrSendEvent
     return returnValue
 
-  def enterScope(self, orderNum, sourceLoc, env): ## TODO: make this create a scope not an env
-    self.send(orderNum, sourceLoc, env, None, 'enterNewScope', [], None)
+  def enterScope(self, sourceLoc, env): ## TODO: make this create a scope not an env
+    self.send(sourceLoc, env, None, 'enterNewScope', [], None)
     return self.mkEnv(sourceLoc, env, True)
 
   def leaveScope(self, env):
@@ -76,33 +76,33 @@ class EventRecorder(object):
   def _emit(self, event):
     self.queue.put(event.toJSONObject())
   
-  def show(self, orderNum, sourceLoc, env, string, alt):
+  def show(self, sourceLoc, env, string, alt):
     pass
   
   def error(self, sourceLoc, env, errorString):
     event = ErrorEvent(sourceLoc, env, errorString)
     self._emit(event)
   
-  def localReturn(self, orderNum, sourceLoc, env, value):
-    event = LocalReturnEvent(orderNum, sourceLoc, env, value)
+  def localReturn(self, sourceLoc, env, value):
+    event = LocalReturnEvent(sourceLoc, env, value)
     self._emit(event)
 
     return value
   
-  def nonLocalReturn(self, orderNum, sourceLoc, env, value):
+  def nonLocalReturn(self, sourceLoc, env, value):
     pass
   
-  def assignVar(self, orderNum, sourceLoc, env, declEnv, name, value):
+  def assignVar(self, sourceLoc, env, declEnv, name, value):
     try:
       declEnv = declEnv.getDeclEnvFor(name)
-      event = VarAssignmentEvent(orderNum, sourceLoc, env, declEnv, name, value)
+      event = VarAssignmentEvent(sourceLoc, env, declEnv, name, value)
     except KeyError:
       declEnv.declare(name)
-      event = VarDeclEvent(orderNum, sourceLoc, env, declEnv, name, value)
+      event = VarDeclEvent(sourceLoc, env, declEnv, name, value)
     self._emit(event)
     return value
   
-  def assignInstVar(self, orderNum, sourceLoc, env, obj, name, value):
+  def assignInstVar(self, sourceLoc, env, obj, name, value):
     pass
   
   def instantiate(sourceLoc, env, _class, args, newInstance):

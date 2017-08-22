@@ -11,6 +11,10 @@ class MicroVizEvents extends CheckedEmitter {
     this.eventGroups = [];
   }
 
+  get orderNum() {
+    return this.programOrSendEvent.orderNum;
+  }
+
   get lastEventGroup() {
     return this.eventGroups[this.eventGroups.length - 1];
   }
@@ -26,11 +30,12 @@ class MicroVizEvents extends CheckedEmitter {
     const eventIsLocal = event.sourceLoc && this.sourceLoc.contains(event.sourceLoc);
     if (eventIsLocal && this.lastEventGroup instanceof LocalEventGroup) {
       const lastEvent = this.lastEventGroup.lastEvent;
-      if (event.sourceLoc.startPos >= lastEvent.sourceLoc.endPos ||  // Toby's rule
-          event.sourceLoc.strictlyContains(lastEvent.sourceLoc) ||  // Inside-out rule
-          event.sourceLoc.equals(lastEvent.sourceLoc) &&
-              event.constructor !== lastEvent.constructor &&
-              (event instanceof ReturnEvent || event instanceof ShowEvent)) {
+      if (event.orderNum > lastEvent.orderNum) {//} ||
+        // event.sourceLoc.startPos >= lastEvent.sourceLoc.endPos ||  // Toby's rule
+        //   event.sourceLoc.strictlyContains(lastEvent.sourceLoc) ||  // Inside-out rule
+          // event.sourceLoc.equals(lastEvent.sourceLoc) &&
+          //     event.constructor !== lastEvent.constructor &&
+          //     (event instanceof ReturnEvent || event instanceof ShowEvent)) {
         // no-op
       } else {
         const eventGroup = new LocalEventGroup();

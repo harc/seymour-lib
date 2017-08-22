@@ -1,0 +1,158 @@
+:root {
+  --hover-color       : hsl(0, 0%, 80%);
+  --focus-color       : hsl(219, 90%, 65%);
+  /* TODO: tune these colors */
+  --def-color         : hsl(219, 72%, 90%);
+  --ref-color         : hsl(219, 80%, 85%);
+  --ref-specific-color: hsl(219, 80%, 75%);
+
+  --widget-background-color: hsl(217, 96%, 95%);
+
+  --color-a: hsl(28, 100%, 53%);
+  --color-b: hsl(121, 57%, 40%);
+  --color-c: hsl(359, 69%, 50%);
+  --color-d: hsl(271, 39%, 57%);
+  --color-e: hsl(10, 29%, 42%);
+  --color-f: hsl(319, 66%, 68%);
+  --color-g: hsl(60, 68%, 44%);
+  --color-h: hsl(185, 77%, 46%);
+}
+
+body {
+  background: var(--test);
+}
+
+temp {
+
+  color: hsl(57, 90%, 70%); /* old highlight hue */
+}
+
+/* macroViz */
+
+/* TODO: consider keeping cursorOnDecl, cursorOnSend */
+
+macroVizNode[isFocusable="true"] > label:hover {
+  background: var(--hover-color);
+}
+
+macroVizNode.highlight-focus > label {
+  background-color: var(--focus-color) !important;
+}
+
+macroVizNode.highlight-def > label {
+  background-color: var(--def-color) !important;
+}
+
+macroVizNode.highlight-ref > label {
+  background-color: var(--ref-color) !important;
+}
+
+macroVizNode.highlight-ref-specific > label {
+  background-color: var(--ref-specific-color) !important;
+}
+
+macroVizNode.highlight-ref-1 > label {
+  background-color: var(--color-a) !important;
+}
+
+macroVizNode.highlight-ref-2 > label {
+  background-color: var(--color-b) !important;
+}
+
+macroVizNode.highlight-ref-3 > label {
+  background-color: var(--color-c) !important;
+}
+
+macroVizNode.highlight-ref-4 > label {
+  background-color: var(--color-d) !important;
+}
+
+macroVizNode.highlight-ref-5 > label {
+  background-color: var(--color-e) !important;
+}
+
+macroVizNode.highlight-ref-6 > label {
+  background-color: var(--color-f) !important;
+}
+
+macroVizNode.highlight-ref-7 > label {
+  background-color: var(--color-g) !important;
+}
+
+macroVizNode.highlight-ref-8 > label {
+  background-color: var(--color-h) !important;
+}
+
+
+/* TODO: ref-colors */
+
+/* microViz */
+
+
+/* code */
+
+.CodeMirror *[class*=' highlight-'] {
+  box-shadow: 1px 1px 0px 0px #aaa;
+}
+
+.CodeMirror .highlight-def {
+  background-color: var(--def-color) !important;
+}
+
+.CodeMirror .highlight-ref {
+  background-color: var(--ref-color) !important;
+}
+
+resultWidget {
+  display: block;
+  z-index: 2000;
+  border-radius: 2pt;
+  padding: 0 4pt;
+  margin-top: 4px;
+  background: var(--widget-background-color);
+  box-shadow: 1px 1px 4px hsl(0, 0%, 30%);
+}
+
+focusWidget {
+  display: block;
+  z-index: 2000;
+  border-radius: 2pt;
+  padding: 2pt 4pt;
+  margin-top: 0px;
+  background: var(--widget-background-color);
+  box-shadow: 1px 1px 4px hsl(0, 0%, 30%);
+}
+
+focusWidget > call {
+  padding: 0 2pt;
+}
+
+focusWidget > call.index-0 { color: var(--color-a); }
+focusWidget > call.index-1 { color: var(--color-b); }
+focusWidget > call.index-2 { color: var(--color-c); }
+focusWidget > call.index-3 { color: var(--color-d); }
+focusWidget > call.index-4 { color: var(--color-e); }
+focusWidget > call.index-5 { color: var(--color-f); }
+focusWidget > call.index-6 { color: var(--color-g); }
+focusWidget > call.index-7 { color: var(--color-h); }
+
+
+/* other */
+
+#legend {
+  list-style-type: none;
+  padding: 10px;
+  margin: 0px;
+  margin-bottom: 10px;
+  background-color: hsl(0, 0%, 100%);
+}
+
+#legend > .definition > .swatch {
+  color: var(--def-color) ;
+}
+#legend > .call > .swatch {
+  color: var(--ref-color) ;
+}
+#legend > .focused > .swatch {
+  color: var(--focus-color) ;
+}
