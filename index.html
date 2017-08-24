@@ -234,7 +234,7 @@ def runCode():
       return R.localReturn(7, sls['recReturn'], fEnv, fa + fb)
 
   theRange = (
-    R.send(2, sls['range'], globalEnv, None, 'range', [5], None), 
+    R.send(2, sls['range'], globalEnv, range, '__call__', [5], None), 
     R.receive(globalEnv, range(5))
   )[1]
   loopEnv = R.enterScope(3, sls['theLoop'], globalEnv)
@@ -274,7 +274,7 @@ def runCode():
   sum = R.assignVar(2, sls['sumDecl'], globalEnv, globalEnv, 'sum', 0)
 
   theRange = (
-    R.send(3, sls['range'], globalEnv, None, 'range', [5], None), 
+    R.send(3, sls['range'], globalEnv, range, '__call__', [5], None), 
     R.receive(globalEnv, range(5))
   )[1]
   loopEnv = R.enterScope(4, sls['theLoop'], globalEnv)
