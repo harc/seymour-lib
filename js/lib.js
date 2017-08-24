@@ -22,3 +22,7 @@ function d(elementType, attributes, ...children) {
 function flatten(arrs) {
   return [].concat.apply([], arrs);
 }
+
+function unique(arr) {
+  return Array.from(new Set(arr));
+}

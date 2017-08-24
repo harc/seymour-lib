@@ -19,3 +19,9 @@ class NetworkEncoder(json.JSONEncoder):
 
 def toJSON(jsonObject):
   return NetworkEncoder().encode(jsonObject)
+
+def toNetworkObject(jsonObject):
+  return json.loads(toJSON(jsonObject))
+
+def toNetworkString(jsonObject):
+  return str(toNetworkObject(jsonObject))

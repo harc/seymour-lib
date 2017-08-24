@@ -196,7 +196,6 @@ class MicroViz extends CheckedEmitter {
 
 }
 
-
 class AbstractView {
   constructor(parent, sourceLoc, classes) {
     this.parent = parent;
@@ -426,12 +425,12 @@ class LocalEventGroupView extends AbstractView {
 
   addImplementation(implView) {
     // pick out nodes on implview's extent
-    const nodesToWrap = flatten(this.extent
+    const nodesToWrap = unique(flatten(this.extent
         .map(line => this.children[line].concat(this.spacers[line])))
       .filter(node => node !== null)
       .filter(child => 
         !(child.startLine < implView.startLine  && child.endLine < implView.startLine) &&
-        !(child.startLine > implView.endLine  && child.endLine > implView.endLine));
+        !(child.startLine > implView.endLine  && child.endLine > implView.endLine)));
     const referenceDOM = nodesToWrap[nodesToWrap.length-1].DOM.nextSibling || null;
     
     // remove those nodes

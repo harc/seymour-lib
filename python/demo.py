@@ -58,6 +58,65 @@ s = str(p)
 before = p
 p.move()
 after = p
+
+###
+
+globalEnv = R.program(...)
+
+_env = R.enterScope(..., globalEnv)
+class Point(object): 
+  def __init__(self, x, y):
+    R.instantiate(..., R.currentEnvironment, Point, [x, y], self)
+    initEnv = R.mkEnv(..., '__init__', Point._env)
+    R.assignVar(..., initEnv, initEnv, 'self', self)
+    R.assignVar(..., initEnv, initEnv, 'x', x)
+    R.assignVar(..., initEnv, initEnv, 'y', y)
+    self.x = R.assignInstVar(..., initEnv, self, 'x', x)
+    self.y = R.assignInstVar(..., initEnv, self, 'y', y)
+
+  def __str__(self):
+    strEnv = R.mkEnv(..., '__str__', Point._env)
+    R.assignVar(..., strEnv, strEnv, 'self', self)
+    sx = R.assignVar(..., strEnv, strEnv, 'sx', (
+      R.send(..., tdsEnv, None, 'str', [self.x], None),
+      R.receive(tdsEnv, str(self.x))
+    )[1])
+    sy = R.assignVar(..., strEnv, strEnv, 'sy', (
+      R.send(..., tdsEnv, None, 'str', [self.y], None),
+      R.receive(tdsEnv, str(self.y))
+    )[1])
+    return R.localReturn(..., strEnv, "(" + sx + ", " + sy + ")")
+
+  def toDebugString(self):
+    tdsEnv = R.mkEnv(..., 'toDebugString', Point._env)
+    R.assignVar(..., tdsEnv, tdsEnv, 'self', self)
+    return R.localReturn(..., tdsEnv, (
+      R.send(..., tdsEnv, None, 'str', [self], None),
+      R.receive(tdsEnv, str(self))
+    )[1])
+
+  def move(self):
+    moveEnv = R.mkEnv(..., 'move', Point._env)
+    R.assignVar(..., moveEnv, moveEnv, 'self', self)
+    self.x = R.assignInstVar(..., moveEnv, self, 'x', self.x + 5) 
+    self.y = R.assignInstVar(..., moveEnv, self, 'y', self.y - 7)
+R.leaveScope(..., _env)
+
+p = R.assignVar(..., globalEnv, globalEnv, 'p', (
+  R.send(..., globalEnv, None, 'Point', [1, 2], None),
+  R.receive(globalEnv, Point(1, 2))
+)[1])
+s = R.assignVar(..., globalEnv, globalEnv, 's', (
+  R.send(..., globalEnv, None, 'str', [p], None),
+  R.receive(globalEnv, str(p))
+)[1])
+
+before = R.assignVar(..., globalEnv, globalEnv, 'before', p)
+(
+  R.send(..., globalEnv, p, 'move', [], None),
+  R.receive(globalEnv, p.move())
+)[1]
+after = R.assignVar(..., globalEnv, globalEnv, 'after', p)
 
 # (6) more live programming
 

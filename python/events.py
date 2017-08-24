@@ -3,7 +3,7 @@
 
 import json
 
-from utils import toJSON
+from utils import toJSON, toNetworkObject, toNetworkString
 
 class Event(object):
   nextEventId = 0
@@ -40,6 +40,8 @@ class ProgramEvent(Event):
     self.activationEnv = None
     self.selector = 'program'
     self.activated = False
+    self.recv = None
+    self.args = []
   
   def toMicroVizString(self):
     return 'PROGRAM'
@@ -52,12 +54,12 @@ class VarDeclEvent(Event):
     self.declEnv = declEnv
   
   def toMicroVizString(self):
-    return self.name + ' = ' + toJSON(self.value)
+    return self.name + ' = ' + toNetworkString(self.value)
 
   def toJSONObject(self):
     dict = super(VarDeclEvent, self).toJSONObject()
     dict['name'] = self.name
-    dict['value'] = self.value
+    dict['value'] = toNetworkObject(self.value)
     dict['declEnvId'] = self.declEnv.id
     return dict
 
@@ -69,12 +71,12 @@ class VarAssignmentEvent(Event):
     self.value = value
   
   def toMicroVizString(self):
-    return self.name + ' = ' + toJSON(self.value)
+    return self.name + ' = ' + toNetworkString(self.value)
 
   def toJSONObject(self):
     dict = super(VarAssignmentEvent, self).toJSONObject()
     dict['name'] = self.name
-    dict['value'] = self.value
+    dict['value'] = toNetworkObject(self.value)
     dict['declEnvId'] = self.declEnv.id
     return dict
 
@@ -91,9 +93,9 @@ class SendEvent(Event):
 
   def toJSONObject(self):
     dict = super(SendEvent, self).toJSONObject()
-    dict['recv'] = self.recv
+    dict['recv'] = toNetworkObject(self.recv)
     dict['selector'] = self.selector
-    dict['args'] = self.args
+    dict['args'] = list(map(toNetworkObject, self.args))
     dict['activationPathToken'] = self.activationPathToken
     return dict
 
@@ -112,7 +114,7 @@ class LocalReturnEvent(ReturnEvent):
     super(LocalReturnEvent, self).__init__(orderNum, sourceLoc, env, value)
 
   def toMicroVizString(self):
-    return '→ ' + toJSON(self.value)
+    return '→ ' + toNetworkString(self.value)
 
 class ErrorEvent(Event):
   def __init__(self, sourceLoc, env, errorString):
@@ -127,6 +129,41 @@ class ErrorEvent(Event):
   def toMicroVizString(self):
     return '▨'
 
+class InstVarAssignmentEvent(Event):
+  def __init__(self, orderNum, sourceLoc, env, obj, name, value):
+    super(InstVarAssignmentEvent, self).__init__(orderNum, sourceLoc, env)
+    self.obj = obj
+    self.name = name
+    self.value = value
+
+  def toJSONObject(self):
+    dict = super(InstVarAssignmentEvent, self).toJSONObject()
+    dict['obj'] = toNetworkObject(self.obj)
+    dict['name'] = self.name
+    dict['value'] = toNetworkObject(self.value)
+    return dict
+  
+  def toMicroVizString(self):
+    return toNetworkString(self.obj) + '.' + self.name + ' = ' + toNetworkString(self.value)
+
+class InstantiationEvent(Event):
+  def __init__(self, orderNum, sourceLoc, env, _class, args, newInstance):
+    super(InstantiationEvent, self).__init__(orderNum, sourceLoc, env)
+    self._class = _class
+    self.args = args
+    self.newInstance = newInstance
+  
+  def toJSONObject(self):
+    dict = super(InstantiationEvent, self).toJSONObject()
+    dict['class'] = self._class.__name__
+    dict['args'] = self.args
+    dict['newInstance'] = toNetworkObject(self.newInstance)
+    return dict
+  
+  def toMicroVizString(self):
+    return 'new ' + self._class.__name__ + ' → ' + toNetworkString(self.newInstance)
+
+
 ##----- Intended as RPC calls -------
 
 class ReceiveEvent(Event):
@@ -136,5 +173,5 @@ class ReceiveEvent(Event):
   
   def toJSONObject(self):
     dict = super(ReceiveEvent, self).toJSONObject()
-    dict['returnValue'] = self.returnValue
+    dict['returnValue'] = toJSON(self.returnValue)
     return dict

@@ -4,6 +4,7 @@ import time
 from events import *
 from Env import Env, Scope
 from utils import toJSON
+import pickle
 
 ## TODO: since we don't have to propagate anything here, events are not that important
 ## they're more like rpc calls to the right method in the eventrecorder
@@ -13,13 +14,14 @@ class EventRecorder(object):
   def __init__(self, queue):
     self.currentProgramOrSendEvent = None
     self.queue = queue
+    self.raised = False
   
   def program(self, orderNum, sourceLoc):
     event = ProgramEvent(orderNum, sourceLoc)
     self.currentProgramOrSendEvent = event
     self._emit(event)
 
-    env = self.mkEnv(sourceLoc, 'program', None)
+    env = self.mkEnv(sourceLoc, None, None, 'program', [])
     return env
 
   ## TODO: deal with activationPathToken
@@ -31,29 +33,34 @@ class EventRecorder(object):
     self.currentProgramOrSendEvent = event
   
   def _hiddenSend(self, env, selector):
-    self.send(-1, None, env, None, selector, None, None) # TODO: this is wrong, should have more info
+    self.send(-1, None, env, None, selector, [], None) # TODO: this is wrong, should have more info
 
   def _mkHiddenEnv(self, parentEnv):
     programOrSendEvent = self.currentProgramOrSendEvent
     newEnv = Env(None, parentEnv, programOrSendEvent.env, programOrSendEvent)
     return self._registerSend(newEnv)
 
-  def mkEnv(self, newEnvSourceLoc, selector, parentEnv, scope=False):
+  def mkEnv(self, newEnvSourceLoc, parentEnv, recv, selector, args, scope=False):
     if scope:
       envClass = Scope
     else:
       envClass = Env
     programOrSendEvent = self.currentProgramOrSendEvent
-    if programOrSendEvent.selector == selector and not programOrSendEvent.activated:
+    same = (recv is programOrSendEvent.recv) and (selector is programOrSendEvent.selector)
+    for idx, arg in enumerate(args):
+      same = same and (arg is programOrSendEvent.args[idx])
+    
+    if not programOrSendEvent.activated:
+      if same:
+        callerEnv = programOrSendEvent.env
+      else:
+        callerEnv = self._mkHiddenEnv(parentEnv)
+        self._hiddenSend(callerEnv, selector)
+        programOrSendEvent = self.currentProgramOrSendEvent
+    else:
       callerEnv = programOrSendEvent.env
-    elif programOrSendEvent.selector == selector and programOrSendEvent.activated:
-      callerEnv = programOrSendEvent.env
-      self._hiddenSend(callerEnv, selector)
-      programOrSendEvent = self.currentProgramOrSendEvent
-    elif programOrSendEvent.selector != selector and not programOrSendEvent.activated:
-      callerEnv = self._mkHiddenEnv(parentEnv)
-      self._hiddenSend(callerEnv, selector)
-      programOrSendEvent = self.currentProgramOrSendEvent
+      self._hiddenSend(callerEnv, selector) #TODO, different env
+      programOrSendEvent = self.currentProgramOrSendEvent  
 
     newEnv = envClass(newEnvSourceLoc, parentEnv, callerEnv, programOrSendEvent)
     return self._registerSend(newEnv)
@@ -73,7 +80,7 @@ class EventRecorder(object):
       if parentEvent != None:
         parentEvent.children.append(programOrSendEvent)
       
-      self.queue.put(newEnv.toJSONObject())
+      self.queue.put(pickle.dumps(newEnv.toJSONObject()))
       return newEnv
   
   def receive(self, env, returnValue):
@@ -93,20 +100,22 @@ class EventRecorder(object):
 
   def enterScope(self, orderNum, sourceLoc, env): ## TODO: make this create a scope not an env
     self.send(orderNum, sourceLoc, env, None, 'enterNewScope', [], None)
-    return self.mkEnv(sourceLoc, 'enterNewScope', env,  True)
+    return self.mkEnv(sourceLoc, env, None, 'enterNewScope', [],  True)
 
   def leaveScope(self, env):
     self.receive(env, None)
   
   def _emit(self, event):
-    self.queue.put(event.toJSONObject())
+    self.queue.put(pickle.dumps(event.toJSONObject()))
   
   def show(self, orderNum, sourceLoc, env, string, alt):
     pass
   
-  def error(self, sourceLoc, env, errorString):
-    event = ErrorEvent(sourceLoc, env, errorString)
+  def error(self, sourceLoc, env, error):
+    event = ErrorEvent(sourceLoc, env, str(error))
+    self.raised = True
     self._emit(event)
+    return error
   
   def localReturn(self, orderNum, sourceLoc, env, value):
     event = LocalReturnEvent(orderNum, sourceLoc, env, value)
@@ -128,10 +137,14 @@ class EventRecorder(object):
     return value
   
   def assignInstVar(self, orderNum, sourceLoc, env, obj, name, value):
-    pass
+    event = InstVarAssignmentEvent(orderNum, sourceLoc, env, obj, name, value)
+    self._emit(event)
+    return value
   
-  def instantiate(sourceLoc, env, _class, args, newInstance):
-    pass
+  def instantiate(self, orderNum, sourceLoc, env, _class, args, newInstance):
+    event = InstantiationEvent(orderNum, sourceLoc, env, _class, args, newInstance)
+    self._emit(event)
+    return newInstance
   
   def done(self):
-    self.queue.put({'type': 'done'})
+    self.queue.put(pickle.dumps({'type': 'done'}))

@@ -135,7 +135,7 @@ class InstantiationEvent extends Event {
   }
 
   toMicroVizString() {
-    return 'new ' + this._valueString(this.class) + ' -> ' + this._valueString(this.newInstance);
+    return 'new ' + this._valueString(this.class) + ' → ' + this._valueString(this.newInstance);
   }
 }
 

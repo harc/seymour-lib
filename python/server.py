@@ -4,6 +4,7 @@ import asyncio
 from aioprocessing import AioProcess, AioQueue
 import websockets
 import json
+import dill
 
 from EventRecorder import EventRecorder
 from utils import toJSON
@@ -46,7 +47,7 @@ class ClientCommunicator(object):
 
   async def processQueue(self, queue):
     while True:
-      item = await queue.coro_get()
+      item = dill.loads(await queue.coro_get())
       await self.websocket.send(toJSON(item))
       if item['type'] == 'done':
         await self.codeRunner.join()
@@ -65,15 +66,16 @@ class CodeRunner(object):
     g['sls'] = self.sourceLocs
     g['R'] = R
     exec(self.code, g)
-    try:
-      g['runCode']()
-    except Exception as e:
-      activationEnv = R.currentProgramOrSendEvent.activationEnv
-      R.error(
-        R.currentProgramOrSendEvent.sourceLoc if activationEnv != None else None,
-        activationEnv if activationEnv != None else R.currentProgramOrSendEvent.env,
-        str(e)
-      )
+  # try:
+    g['runCode']()
+  # except Exception as e:
+  #   if not R.raised:
+  #     activationEnv = R.currentProgramOrSendEvent.activationEnv
+  #     R.error(
+  #       R.currentProgramOrSendEvent.sourceLoc if activationEnv != None else None,
+  #       activationEnv if activationEnv != None else R.currentProgramOrSendEvent.env,
+  #       str(e)
+  #     )
   
   def start(self):
     self.process.start()
