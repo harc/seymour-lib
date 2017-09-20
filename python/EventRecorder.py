@@ -15,6 +15,20 @@ class EventRecorder(object):
     self.currentProgramOrSendEvent = None
     self.queue = queue
     self.raised = False
+    self.memo = {}
+    self.parents = {}
+  
+  def memoize(self, key, value):
+    self.memo[key] = value
+  
+  def retrieve(self, key):
+    return self.memo[key]
+
+  def parentEnv(self, fn, env):
+    self.parents[fn] = env
+  
+  def getParentEnv(self, fn):
+    return self.parents[fn]
   
   def program(self, orderNum, sourceLoc):
     event = ProgramEvent(orderNum, sourceLoc)

@@ -6,11 +6,32 @@
     <head><title>Seymour-Lib</title></head>
     <script src="node_modules/checked-emitter/dist/checked-emitter.js"></script>
     <script src="node_modules/codemirror/lib/codemirror.js"></script>
+
+    <!-- <script src="js/SourceLoc.js"></script> -->
+
+    <script src="python-in-ohm/SourceLoc.js"></script>
+    <script src="python-in-ohm/node_modules/ohm-js/dist/ohm.js"></script>
+    <script src="python-in-ohm/node_modules/underscore/underscore-min.js"></script>
+    <script src="python-in-ohm/node_modules/lex/lexer.js"></script>
+    <script src="python-in-ohm/utils.js"></script>
+    <script src="python-in-ohm/SourceMap.js"></script>
+    <script src="python-in-ohm/lexer/tokens.js"></script>
+    <script src="python-in-ohm/lexer/index.js"></script>
+    <script src="python-in-ohm/parser/grammar.js"></script>
+    <script src="python-in-ohm/parser/semantics.js"></script>
+    <script src="python-in-ohm/parser/ast.js"></script>
+    <script src="python-in-ohm/parser/instrumented.js"></script>
+    <script src="python-in-ohm/parser/sourceLoc.js"></script>
+    <script src="python-in-ohm/parser/toAST.js"></script>
+    <script src="python-in-ohm/parser/easyAst.js"></script>
+    <script src="python-in-ohm/parser/toList.js"></script>
+    <script src="python-in-ohm/parser/verify.js"></script>
+    <script src="python-in-ohm/parser/index.js"></script>
+
     <script src="js/pathmatcher.js"></script>
     <script src="js/Env.js"></script>
     <script src="js/EventRecorder.js"></script>
     <script src="js/MicroVizEvents.js"></script>
-    <script src="js/SourceLoc.js"></script>
     <script src="js/events.js"></script>
     <script src="js/lib.js"></script>
     <script src="js/macroViz.js"></script>
@@ -129,11 +150,13 @@ function makeSourceLoc(json) {
     return null;
   }
   return new SourceLoc(
-    json.startPos,
-    json.endPos,
-    json.startLineNumber,
-    json.endLineNumber,
-    json.name
+    json.startIdx,
+    json.endIdx,
+    // json.startPos,
+    // json.endPos,
+    // json.startLineNumber,
+    // json.endLineNumber,
+    // json.name
   )
 }
 
@@ -217,35 +240,43 @@ addExample('python-fib', () => {
     ]}, '\n'
   ]});
 
-  const instrumentedCode = `
-def runCode():
-  globalEnv = R.program(1, sls['program'])
+// const instrumentedCode = `
+// def runCode():
+//   globalEnv = R.program(1, sls['program'])
   
-  def fib(n):
-    fEnv = R.mkEnv(sls['fibDef'], globalEnv, fib, '__call__', [n])
-    R.assignVar(1, sls['nDecl'], fEnv, fEnv, 'n', n)
-    if n < 2: 
-      return R.localReturn(2, sls['baseReturn'], fEnv, n)
-    else:
-      fa = R.assignVar(4, sls['faDecl'], fEnv, fEnv, 'fa', 
-        (R.send(3, sls['faCall'] , fEnv, fib, '__call__', [n-1], None), R.receive(fEnv, fib(n-1)))[1])
-      fb = R.assignVar(6, sls['fbDecl'], fEnv, fEnv, 'fb', 
-        (R.send(5, sls['fbCall'], fEnv, fib, '__call__', [n-2], None), R.receive(fEnv, fib(n-2)))[1])
-      return R.localReturn(7, sls['recReturn'], fEnv, fa + fb)
+//   def fib(n):
+//     fEnv = R.mkEnv(sls['fibDef'], globalEnv, fib, '__call__', [n])
+//     R.assignVar(1, sls['nDecl'], fEnv, fEnv, 'n', n)
+//     if n < 2: 
+//       return R.localReturn(2, sls['baseReturn'], fEnv, n)
+//     else:
+//       fa = R.assignVar(4, sls['faDecl'], fEnv, fEnv, 'fa', 
+//         (R.send(3, sls['faCall'] , fEnv, fib, '__call__', [n-1], None), R.receive(fEnv, fib(n-1)))[1])
+//       fb = R.assignVar(6, sls['fbDecl'], fEnv, fEnv, 'fb', 
+//         (R.send(5, sls['fbCall'], fEnv, fib, '__call__', [n-2], None), R.receive(fEnv, fib(n-2)))[1])
+//       return R.localReturn(7, sls['recReturn'], fEnv, fa + fb)
 
-  theRange = (
-    R.send(2, sls['range'], globalEnv, range, '__call__', [5], None), 
-    R.receive(globalEnv, range(5))
-  )[1]
-  loopEnv = R.enterScope(3, sls['theLoop'], globalEnv)
-  for x in theRange:
-    R.assignVar(4, sls['xDecl'], loopEnv, globalEnv, 'x', x)
-    fx = R.assignVar(6, sls['fxDecl'], loopEnv, globalEnv, 'fx', 
-      (R.send(5, sls['fibCall'], loopEnv, fib, '__call__', [x], None), R.receive(loopEnv, fib(x)))[1])
-  R.leaveScope(loopEnv)
+//   theRange = (
+//     R.send(2, sls['range'], globalEnv, range, '__call__', [5], None), 
+//     R.receive(globalEnv, range(5))
+//   )[1]
+//   loopEnv = R.enterScope(3, sls['theLoop'], globalEnv)
+//   for x in theRange:
+//     R.assignVar(4, sls['xDecl'], loopEnv, globalEnv, 'x', x)
+//     fx = R.assignVar(6, sls['fxDecl'], loopEnv, globalEnv, 'fx', 
+//       (R.send(5, sls['fibCall'], loopEnv, fib, '__call__', [x], None), R.receive(loopEnv, fib(x)))[1])
+//   R.leaveScope(loopEnv)
   
-  R.done()
-`;
+//   R.done()
+// `;
+
+  let code = lines.join('\n');
+  SourceLoc.setupCodeMap(code);
+  const preprocessor = new Preprocessor();
+  const instrumenter = new Instrumenter();
+  ({code, map} = preprocessor.preprocess(code));
+  const instrumentedCode = instrumenter.instrument(code, map);
+  console.debug(instrumentedCode);
 
   const R = new EventRecorder();
   macroViz.setEventRecorder(R);
@@ -267,24 +298,33 @@ addExample('python-for', () => {
     ]}, '\n'
   ]});
 
-  const instrumentedCode = `
-def runCode():
-  globalEnv = R.program(1, sls['program'])
+  //   const instrumentedCode = `
+  // def runCode():
+  //   globalEnv = R.program(1, sls['program'])
+  
+  //   sum = R.assignVar(2, sls['sumDecl'], globalEnv, globalEnv, 'sum', 0)
+  
+  //   theRange = (
+  //     R.send(3, sls['range'], globalEnv, range, '__call__', [5], None), 
+  //     R.receive(globalEnv, range(5))
+  //   )[1]
+  //   loopEnv = R.enterScope(4, sls['theLoop'], globalEnv)
+  //   for x in theRange:
+  //     R.assignVar(5, sls['xDecl'], loopEnv, globalEnv, 'x', x)
+  //     sum = R.assignVar(6, sls['sumAssignment'], loopEnv, globalEnv, 'sum', sum + x)
+  //   R.leaveScope(loopEnv)
+  
+  //   R.done()
+  // `;
 
-  sum = R.assignVar(2, sls['sumDecl'], globalEnv, globalEnv, 'sum', 0)
+  let code = lines.join('\n');
+  SourceLoc.setupCodeMap(code);
+  const preprocessor = new Preprocessor();
+  const instrumenter = new Instrumenter();
+  ({code, map} = preprocessor.preprocess(code));
+  const instrumentedCode = instrumenter.instrument(code, map);
+  console.debug(instrumentedCode);
 
-  theRange = (
-    R.send(3, sls['range'], globalEnv, range, '__call__', [5], None), 
-    R.receive(globalEnv, range(5))
-  )[1]
-  loopEnv = R.enterScope(4, sls['theLoop'], globalEnv)
-  for x in theRange:
-    R.assignVar(5, sls['xDecl'], loopEnv, globalEnv, 'x', x)
-    sum = R.assignVar(6, sls['sumAssignment'], loopEnv, globalEnv, 'sum', sum + x)
-  R.leaveScope(loopEnv)
-
-  R.done()
-`;
 
   const R = new EventRecorder();
   macroViz.setEventRecorder(R);
@@ -308,27 +348,35 @@ addExample('python-reduce', () => {
     ]}, '\n'
   ]});
 
-  const instrumentedCode = `
-from functools import reduce
+//   const instrumentedCode = `
+// from functools import reduce
 
-def runCode():
-  globalEnv = R.program(1, sls['program'])
+// def runCode():
+//   globalEnv = R.program(1, sls['program'])
 
-  def _lambda1(x, y):
-    lEnv = R.mkEnv(sls['lambda'], globalEnv, _lambda1, '__call__', [x, y])
-    R.assignVar(1, sls['xDecl'], lEnv, lEnv, 'x', x)
-    R.assignVar(2, sls['yDecl'], lEnv, lEnv, 'y', y)
-    return R.localReturn(3, sls['plus'], lEnv, x + y)
+//   def _lambda1(x, y):
+//     lEnv = R.mkEnv(sls['lambda'], globalEnv, _lambda1, '__call__', [x, y])
+//     R.assignVar(1, sls['xDecl'], lEnv, lEnv, 'x', x)
+//     R.assignVar(2, sls['yDecl'], lEnv, lEnv, 'y', y)
+//     return R.localReturn(3, sls['plus'], lEnv, x + y)
 
-  ans = R.assignVar(3, sls['ansDecl'], globalEnv, globalEnv, 'ans', 
-    (
-      R.send(2, sls['reduce'], globalEnv, reduce, '__call__', [_lambda1, [1, 2, 3, 4], 0], None),
-      R.receive(globalEnv, reduce(_lambda1, [1, 2, 3, 4], 0))
-    )[1]
-  )
+//   ans = R.assignVar(3, sls['ansDecl'], globalEnv, globalEnv, 'ans', 
+//     (
+//       R.send(2, sls['reduce'], globalEnv, reduce, '__call__', [_lambda1, [1, 2, 3, 4], 0], None),
+//       R.receive(globalEnv, reduce(_lambda1, [1, 2, 3, 4], 0))
+//     )[1]
+//   )
 
-  R.done()
-`;
+//   R.done()
+// `;
+
+  let code = lines.join('\n');
+  SourceLoc.setupCodeMap(code);
+  const preprocessor = new Preprocessor();
+  const instrumenter = new Instrumenter();
+  ({code, map} = preprocessor.preprocess(code));
+  const instrumentedCode = instrumenter.instrument(code, map);
+  console.debug(instrumentedCode);
 
   const R = new EventRecorder();
   macroViz.setEventRecorder(R);
@@ -375,26 +423,35 @@ addExample('python-less', () => {
       {name: 'ifThenElse', code: [{name: 'fiveCall', code: 'five()'}, ' if ', {name: 'lessCall', code: 'less(3, 5)'}, ' else 2']  }
   ]}]});
 
-  const instrumentedCode = `
-def runCode():
-  globalEnv = R.program(1, sls['program'])
+//   const instrumentedCode = `
+// def runCode():
+//   globalEnv = R.program(1, sls['program'])
 
-  def less(a, b):
-    fEnv = R.mkEnv(sls['lessDef'], globalEnv, less, '__call__', [a, b])
-    R.assignVar(1, sls['argDecl'], fEnv, fEnv, 'a', a)
-    R.assignVar(2, sls['bDecl'], fEnv, fEnv, 'b', b)
-    return R.localReturn(3, sls['return'], fEnv, a < b)
+//   def less(a, b):
+//     fEnv = R.mkEnv(sls['lessDef'], globalEnv, less, '__call__', [a, b])
+//     R.assignVar(1, sls['argDecl'], fEnv, fEnv, 'a', a)
+//     R.assignVar(2, sls['bDecl'], fEnv, fEnv, 'b', b)
+//     return R.localReturn(3, sls['return'], fEnv, a < b)
   
-  def five():
-    fEnv = R.mkEnv(sls['fiveDef'], globalEnv, five, '__call__', [])
-    return R.localReturn(1, sls['return5'], fEnv, 5)
+//   def five():
+//     fEnv = R.mkEnv(sls['fiveDef'], globalEnv, five, '__call__', [])
+//     return R.localReturn(1, sls['return5'], fEnv, 5)
   
-  a = R.assignVar(4, sls['aDecl'], globalEnv, globalEnv, 'a', 
-    (R.send(3, sls['fiveCall'], globalEnv, five, '__call__', [], None), R.receive(globalEnv, five()))[1] if 
-      (R.send(2, sls['lessCall'], globalEnv, less, '__call__', [5, 3], None), R.receive(globalEnv, less(3, 5)))[1] else 
-      2)
-  R.done()
-`;
+//   a = R.assignVar(4, sls['aDecl'], globalEnv, globalEnv, 'a', 
+//     (R.send(3, sls['fiveCall'], globalEnv, five, '__call__', [], None), R.receive(globalEnv, five()))[1] if 
+//       (R.send(2, sls['lessCall'], globalEnv, less, '__call__', [5, 3], None), R.receive(globalEnv, less(3, 5)))[1] else 
+//       2)
+//   R.done()
+// `;
+
+  let code = lines.join('\n');
+  SourceLoc.setupCodeMap(code);
+  const preprocessor = new Preprocessor();
+  const instrumenter = new Instrumenter();
+  ({code, map} = preprocessor.preprocess(code));
+  const instrumentedCode = instrumenter.instrument(code, map);
+  console.debug(instrumentedCode);
+
 
   const R = new EventRecorder();
   macroViz.setEventRecorder(R);
@@ -430,70 +487,79 @@ addExample('python-point', () => {
     {name: 'moveCall', code: 'p.move()'}, '\n',
     {name: 'afterDecl', code: 'after = p'}, '\n']})
     
-const instrumentedCode = `
-def runCode():
-  globalEnv = R.program(1, sls['program'])
+// const instrumentedCode = `
+// def runCode():
+//   globalEnv = R.program(1, sls['program'])
 
-  _env = R.enterScope(2, sls['pointDef'], globalEnv)
-  class Point(object): 
-    def __new__(typ, *args, **kwargs): ## TODO: this should actually look like an fn
-      obj = object.__new__(typ)
-      programOrSendEvent = R.currentProgramOrSendEvent
-      R.instantiate(programOrSendEvent.orderNum, programOrSendEvent.sourceLoc, programOrSendEvent.env, Point, args, obj)
-      return obj
+//   _env = R.enterScope(2, sls['pointDef'], globalEnv)
+//   class Point(object): 
+//     def __new__(typ, *args, **kwargs): ## TODO: this should actually look like an fn
+//       obj = object.__new__(typ)
+//       programOrSendEvent = R.currentProgramOrSendEvent
+//       R.instantiate(programOrSendEvent.orderNum, programOrSendEvent.sourceLoc, programOrSendEvent.env, Point, args, obj)
+//       return obj
 
-    def __init__(self, x, y):
-      initEnv = R.mkEnv(sls['initDef'],  _env, self, '__init__', [x, y])
-      R.assignVar(1, sls['selfDecl1'], initEnv, initEnv, 'self', self)
-      R.assignVar(2, sls['xDecl1'], initEnv, initEnv, 'x', x)
-      R.assignVar(3, sls['yDecl1'], initEnv, initEnv, 'y', y)
-      self.x = R.assignInstVar(4, sls['instXDecl'], initEnv, self, 'x', x)
-      self.y = R.assignInstVar(5, sls['instYDecl'], initEnv, self, 'y', y)
+//     def __init__(self, x, y):
+//       initEnv = R.mkEnv(sls['initDef'],  _env, self, '__init__', [x, y])
+//       R.assignVar(1, sls['selfDecl1'], initEnv, initEnv, 'self', self)
+//       R.assignVar(2, sls['xDecl1'], initEnv, initEnv, 'x', x)
+//       R.assignVar(3, sls['yDecl1'], initEnv, initEnv, 'y', y)
+//       self.x = R.assignInstVar(4, sls['instXDecl'], initEnv, self, 'x', x)
+//       self.y = R.assignInstVar(5, sls['instYDecl'], initEnv, self, 'y', y)
 
-    def __str__(self):
-      strEnv = R.mkEnv(sls['strDef'], _env, self, '__str__', [])
-      R.assignVar(1, sls['selfDecl2'], strEnv, strEnv, 'self', self)
-      sx = R.assignVar(3, sls['sxDecl'], strEnv, strEnv, 'sx', (
-        R.send(2, sls['strCallX'], strEnv, str, '__call__', [self.x], None),
-        R.receive(strEnv, str(self.x))
-      )[1])
-      sy = R.assignVar(5, sls['syDecl'], strEnv, strEnv, 'sy', (
-        R.send(4, sls['strCallY'], strEnv, str, '__call__', [self.y], None),
-        R.receive(strEnv, str(self.y))
-      )[1])
-      return R.localReturn(6, sls['strReturn'], strEnv, "(" + sx + ", " + sy + ")")
+//     def __str__(self):
+//       strEnv = R.mkEnv(sls['strDef'], _env, self, '__str__', [])
+//       R.assignVar(1, sls['selfDecl2'], strEnv, strEnv, 'self', self)
+//       sx = R.assignVar(3, sls['sxDecl'], strEnv, strEnv, 'sx', (
+//         R.send(2, sls['strCallX'], strEnv, str, '__call__', [self.x], None),
+//         R.receive(strEnv, str(self.x))
+//       )[1])
+//       sy = R.assignVar(5, sls['syDecl'], strEnv, strEnv, 'sy', (
+//         R.send(4, sls['strCallY'], strEnv, str, '__call__', [self.y], None),
+//         R.receive(strEnv, str(self.y))
+//       )[1])
+//       return R.localReturn(6, sls['strReturn'], strEnv, "(" + sx + ", " + sy + ")")
 
-    def toDebugString(self):
-      tdsEnv = R.mkEnv(sls['toDebugStringDef'], _env, self, 'toDebugString', [])
-      R.assignVar(1, sls['selfDecl3'], tdsEnv, tdsEnv, 'self', self)
-      return R.localReturn(4, sls['debugReturn'], tdsEnv, (
-        R.send(2, sls['strCallDebug'], tdsEnv, str, '__call__', [self], None),
-        R.receive(tdsEnv, str(self))
-      )[1])
+//     def toDebugString(self):
+//       tdsEnv = R.mkEnv(sls['toDebugStringDef'], _env, self, 'toDebugString', [])
+//       R.assignVar(1, sls['selfDecl3'], tdsEnv, tdsEnv, 'self', self)
+//       return R.localReturn(4, sls['debugReturn'], tdsEnv, (
+//         R.send(2, sls['strCallDebug'], tdsEnv, str, '__call__', [self], None),
+//         R.receive(tdsEnv, str(self))
+//       )[1])
 
-    def move(self):
-      moveEnv = R.mkEnv(sls['moveDef'], _env, self, 'move', [])
-      R.assignVar(1, sls['selfDecl4'], moveEnv, moveEnv, 'self', self)
-      self.x = R.assignInstVar(2, sls['selfXChange'], moveEnv, self, 'x', self.x + 5) 
-      self.y = R.assignInstVar(3, sls['selfYChange'], moveEnv, self, 'y', self.y - 7)
-  R.leaveScope(_env)
+//     def move(self):
+//       moveEnv = R.mkEnv(sls['moveDef'], _env, self, 'move', [])
+//       R.assignVar(1, sls['selfDecl4'], moveEnv, moveEnv, 'self', self)
+//       self.x = R.assignInstVar(2, sls['selfXChange'], moveEnv, self, 'x', self.x + 5) 
+//       self.y = R.assignInstVar(3, sls['selfYChange'], moveEnv, self, 'y', self.y - 7)
+//   R.leaveScope(_env)
 
-  p = R.assignVar(4, sls['pDecl'], globalEnv, globalEnv, 'p', (
-    R.send(3, sls['PointCall'], globalEnv, Point, '__call__', [1, 2], None),
-    R.receive(globalEnv, Point(1, 2))
-  )[1])
-  s = R.assignVar(6, sls['sDecl'], globalEnv, globalEnv, 's', (
-    R.send(5, sls['strCallGlobal'], globalEnv, str, '__call__', [p], None),
-    R.receive(globalEnv, str(p))
-  )[1])
+//   p = R.assignVar(4, sls['pDecl'], globalEnv, globalEnv, 'p', (
+//     R.send(3, sls['PointCall'], globalEnv, Point, '__call__', [1, 2], None),
+//     R.receive(globalEnv, Point(1, 2))
+//   )[1])
+//   s = R.assignVar(6, sls['sDecl'], globalEnv, globalEnv, 's', (
+//     R.send(5, sls['strCallGlobal'], globalEnv, str, '__call__', [p], None),
+//     R.receive(globalEnv, str(p))
+//   )[1])
 
-  before = R.assignVar(7, sls['beforeDecl'], globalEnv, globalEnv, 'before', p)
-  (
-    R.send(8, sls['moveCall'], globalEnv, p, 'move', [], None),
-    R.receive(globalEnv, p.move())
-  )[1]
-  after = R.assignVar(9, sls['afterDecl'], globalEnv, globalEnv, 'after', p)
-`;
+//   before = R.assignVar(7, sls['beforeDecl'], globalEnv, globalEnv, 'before', p)
+//   (
+//     R.send(8, sls['moveCall'], globalEnv, p, 'move', [], None),
+//     R.receive(globalEnv, p.move())
+//   )[1]
+//   after = R.assignVar(9, sls['afterDecl'], globalEnv, globalEnv, 'after', p)
+// `;
+
+  let code = lines.join('\n');
+  SourceLoc.setupCodeMap(code);
+  const preprocessor = new Preprocessor();
+  const instrumenter = new Instrumenter();
+  ({code, map} = preprocessor.preprocess(code));
+  const instrumentedCode = instrumenter.instrument(code, map);
+  console.debug(instrumentedCode);
+
 
   const R = new EventRecorder();
   macroViz.setEventRecorder(R);
