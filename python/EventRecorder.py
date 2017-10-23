@@ -112,8 +112,8 @@ class EventRecorder(object):
     self.currentProgramOrSendEvent = env.programOrSendEvent
     return returnValue
 
-  def enterScope(self, orderNum, sourceLoc, env): ## TODO: make this create a scope not an env
-    self.send(orderNum, sourceLoc, env, None, 'enterNewScope', [], None)
+  def enterScope(self, orderNum, sourceLoc, env, activationPathToken): ## TODO: make this create a scope not an env
+    self.send(orderNum, sourceLoc, env, None, 'enterNewScope', [], activationPathToken)
     return self.mkEnv(sourceLoc, env, None, 'enterNewScope', [],  True)
 
   def leaveScope(self, env):

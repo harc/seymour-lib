@@ -2,6 +2,8 @@
 
 import asyncio
 from aioprocessing import AioProcess, AioQueue
+import signal
+import argparse
 import websockets
 import json
 import dill
@@ -10,17 +12,24 @@ from EventRecorder import EventRecorder
 from utils import toJSON
 
 class ClientCommunicator(object):
-  def __init__(self):
-    self.start_server = websockets.serve(self.onConnection, 'localhost', 8000)
+  def __init__(self, port):
+    self.start_server = websockets.serve(self.onConnection, 'localhost', port)
     self.loop = asyncio.get_event_loop()
+    self.stop = asyncio.Future()
+    self.loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
+    asyncio.ensure_future(self.processQueue(self.queue), loop=self.loop)
+
     self.queue = AioQueue()
+    self.port = port
     self.websocket = None
     self.codeRunner = None
+
+  def serve_with_graceful_shutdown(self):
+    async with self.start_server:
+      await self.stop
   
   def serve(self):
-    self.loop.run_until_complete(self.start_server)
-    asyncio.ensure_future(self.processQueue(self.queue), loop=self.loop)
-    self.loop.run_forever()
+    self.loop.run_until_complete(self.serve_with_graceful_shutdown)
 
   async def onConnection(self, websocket, path):
     self.websocket = websocket
@@ -66,16 +75,17 @@ class CodeRunner(object):
     g['sls'] = self.sourceLocs
     g['R'] = R
     exec(self.code, g)
-  # try:
-    g['runCode']()
-  # except Exception as e:
-  #   if not R.raised:
-  #     activationEnv = R.currentProgramOrSendEvent.activationEnv
-  #     R.error(
-  #       R.currentProgramOrSendEvent.sourceLoc if activationEnv != None else None,
-  #       activationEnv if activationEnv != None else R.currentProgramOrSendEvent.env,
-  #       str(e)
-  #     )
+    try:
+      g['runCode']()
+    except Exception as e:
+      if not R.raised:
+        print(e)
+        activationEnv = R.currentProgramOrSendEvent.activationEnv
+        R.error(
+          R.currentProgramOrSendEvent.sourceLoc if activationEnv != None else None,
+          activationEnv if activationEnv != None else R.currentProgramOrSendEvent.env,
+          str(e)
+        )
   
   def start(self):
     self.process.start()
@@ -86,6 +96,11 @@ class CodeRunner(object):
   async def join(self):
     return await self.process.coro_join()
 
+
+parser = argparse.ArgumentParser(description="seymour-lib python server")
+parser.add_argument('--port')
+
 if __name__ == '__main__':
-  server = ClientCommunicator()
+  args = parser.parse_args()
+  server = ClientCommunicator(args.port)
   server.serve()
