@@ -13,16 +13,16 @@ from utils import toJSON
 
 class ClientCommunicator(object):
   def __init__(self, port):
+    self.queue = AioQueue()
+    self.port = port
+    self.websocket = None
+    self.codeRunner = None
+
     self.start_server = websockets.serve(self.onConnection, 'localhost', port)
     self.loop = asyncio.get_event_loop()
     self.stop = asyncio.Future()
     self.loop.add_signal_handler(signal.SIGTERM, self.stop.set_result, None)
     asyncio.ensure_future(self.processQueue(self.queue), loop=self.loop)
-
-    self.queue = AioQueue()
-    self.port = port
-    self.websocket = None
-    self.codeRunner = None
 
   async def serve_with_graceful_shutdown(self):
     async with self.start_server:
