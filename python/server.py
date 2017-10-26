@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import asyncio
 from aioprocessing import AioProcess, AioQueue
@@ -24,7 +24,7 @@ class ClientCommunicator(object):
     self.websocket = None
     self.codeRunner = None
 
-  def serve_with_graceful_shutdown(self):
+  async def serve_with_graceful_shutdown(self):
     async with self.start_server:
       await self.stop
   
