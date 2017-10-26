@@ -29,7 +29,7 @@ class ClientCommunicator(object):
       await self.stop
   
   def serve(self):
-    self.loop.run_until_complete(self.serve_with_graceful_shutdown)
+    self.loop.run_until_complete(self.serve_with_graceful_shutdown())
 
   async def onConnection(self, websocket, path):
     self.websocket = websocket
