@@ -5,10 +5,17 @@ from events import *
 from Env import Env, Scope
 from utils import toJSON
 import pickle
-
+from datetime import datetime
+import time
 ## TODO: since we don't have to propagate anything here, events are not that important
 ## they're more like rpc calls to the right method in the eventrecorder
 ## but, since we need environments to make these calls, tracking envs is crucial
+
+EVENTS_PER_PERIOD = 20
+SECONDS_PER_PERIOD = 0.1
+
+class TerminateException(Exception):
+  pass
 
 class EventRecorder(object):
   def __init__(self, queue):
@@ -17,6 +24,10 @@ class EventRecorder(object):
     self.raised = False
     self.memo = {}
     self.parents = {}
+    self.numEventsCreated = 0
+    self.numEventsCreatedInLastPeriod = 0
+    self.periodStart = datetime.now()
+    self.terminate = False
   
   def memoize(self, key, value):
     self.memo[key] = value
@@ -29,6 +40,26 @@ class EventRecorder(object):
   
   def getParentEnv(self, fn):
     return self.parents[fn]
+
+
+  def event(self):
+    if self.terminate:
+      print('TERMINATE')
+      self.queue.close()
+      raise TerminateException()
+    self.numEventsCreated += 1
+    self.numEventsCreatedInLastPeriod += 1
+    now = datetime.now()
+    delta = now - self.periodStart
+    diffSeconds = delta.total_seconds()
+    if (diffSeconds >= SECONDS_PER_PERIOD):
+      self.periodStart = now
+      self.numEventsCreatedInLastPeriod = 0
+    if (self.numEventsCreatedInLastPeriod >= EVENTS_PER_PERIOD):
+      print(SECONDS_PER_PERIOD - diffSeconds)
+      time.sleep(SECONDS_PER_PERIOD - diffSeconds)
+      self.periodStart = datetime.now()
+      self.numEventsCreatedInLastPeriod = 0
   
   def program(self, orderNum, sourceLoc):
     event = ProgramEvent(orderNum, sourceLoc)
@@ -94,6 +125,7 @@ class EventRecorder(object):
       if parentEvent != None:
         parentEvent.children.append(programOrSendEvent)
       
+      self.event()
       self.queue.put(pickle.dumps(newEnv.toJSONObject()))
       return newEnv
   
@@ -120,6 +152,7 @@ class EventRecorder(object):
     self.receive(env, None)
   
   def _emit(self, event):
+    self.event()
     self.queue.put(pickle.dumps(event.toJSONObject()))
   
   def show(self, orderNum, sourceLoc, env, string, alt):

@@ -3,12 +3,14 @@
 import asyncio
 from aioprocessing import AioProcess, AioQueue
 import signal
+import sys
 import argparse
 import websockets
 import json
 import dill
+import os
 
-from EventRecorder import EventRecorder
+from EventRecorder import EventRecorder, TerminateException
 from utils import toJSON
 
 class ClientCommunicator(object):
@@ -18,18 +20,13 @@ class ClientCommunicator(object):
     self.websocket = None
     self.codeRunner = None
 
-    self.start_server = websockets.serve(self.onConnection, 'localhost', port)
+    self.start_server = websockets.serve(self.onConnection, 'localhost', self.port)
     self.loop = asyncio.get_event_loop()
-    self.stop = asyncio.Future()
-    self.loop.add_signal_handler(signal.SIGTERM, self.stop.set_result, None)
     asyncio.ensure_future(self.processQueue(self.queue), loop=self.loop)
-
-  async def serve_with_graceful_shutdown(self):
-    async with self.start_server:
-      await self.stop
   
   def serve(self):
-    self.loop.run_until_complete(self.serve_with_graceful_shutdown())
+    self.loop.run_until_complete(self.start_server)
+    self.loop.run_forever()
 
   async def onConnection(self, websocket, path):
     self.websocket = websocket
@@ -48,6 +45,7 @@ class ClientCommunicator(object):
       elif message['type'] == 'kill':
         try:
           self.codeRunner.terminate()
+          self.codeRunner.process.join()
           self.codeRunner = None
         except AttributeError:
           pass
@@ -68,15 +66,19 @@ class CodeRunner(object):
     self.sourceLocs = sourceLocs
     self.queue = queue
     self.process = AioProcess(target=self.run)
+    self.R = None
   
   def run(self):
+    signal.signal(signal.SIGTERM, self.exit_gracefully)
     g = globals().copy()
-    R = EventRecorder(self.queue)
+    self.R = R = EventRecorder(self.queue)
     g['sls'] = self.sourceLocs
     g['R'] = R
     exec(self.code, g)
     try:
       g['runCode']()
+    except TerminateException as te:
+      pass
     except Exception as e:
       if not R.raised:
         print(e)
@@ -87,6 +89,10 @@ class CodeRunner(object):
           str(e)
         )
   
+  def exit_gracefully(self, arg1, arg2):
+    self.R.terminate = True
+
+
   def start(self):
     self.process.start()
   
