@@ -11,8 +11,8 @@ import time
 ## they're more like rpc calls to the right method in the eventrecorder
 ## but, since we need environments to make these calls, tracking envs is crucial
 
-EVENTS_PER_PERIOD = 20
-SECONDS_PER_PERIOD = 0.1
+EVENTS_PER_PERIOD = 100
+SECONDS_PER_PERIOD = 1
 
 class TerminateException(Exception):
   pass
